@@ -4,7 +4,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/4xnlbyty1i4mjrpq?svg=true)](https://ci.appveyor.com/project/milostosic/rprof)
 [![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/milostosic/rprof/blob/master/LICENSE)
 
-**rprof** is a scope based CPU profiling library with ImGui visulization and browser profile inspector.
+**rprof** is a scope based CPU profiling library with [ImGui](https://github.com/ocornut/imgui) visulization and browser profile inspector.
 
 About
 ======
@@ -61,7 +61,7 @@ Browser inspector
 
 Captured frame profiles can be saved to binary files for offline inspection.
 The browser based inspector is built using Emscripten. Makefile is included for convenience.
-Browser inspector is based on ImGui and is interacive provinding zooming and panning as well as statistical overview of the frame.
+Browser inspector is based on [ImGui](https://github.com/ocornut/imgui) and is interacive provinding zooming and panning as well as statistical overview of the frame.
 
 ![Inspector screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_browser.jpg) 
 
