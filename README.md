@@ -21,7 +21,8 @@ You can get the latest source code by cloning it from github:
 Dependencies
 ======
 
-rtm build system scirpts (https://github.com/milostosic/build):
+There are no dependencies besides the [build](https://github.com/milostosic/build) system scripts, which are optional.  
+It is recommended to use the [build](https://github.com/milostosic/build) system scripts to easily generate projects for numerous platforms:
 
 	git clone https://github.com/milostosic/build.git
 
