@@ -4,10 +4,12 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/4xnlbyty1i4mjrpq?svg=true)](https://ci.appveyor.com/project/milostosic/rprof)
 [![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/milostosic/rprof/blob/master/LICENSE)
 
-**rprof** is a scope based CPU profiling library with [ImGui](https://github.com/ocornut/imgui) visulization and browser profile inspector.
-
 About
 ======
+
+**rprof** is a scope based CPU profiling library with [ImGui](https://github.com/ocornut/imgui) visulization and browser profile inspector. The core concept is a time threshold, which can be used to easily catch functions or entire frames that exceed certain time value. By doing this, optimization can focus initially on frames and functions that are only occasionally slow and iteratively progress towards more consistent performance.
+
+Profiler always runs when used, but will display only those frames that exceed given threshold. Default value of 0 means to display every frame. Level value refers to hierachical scope depth where value of 0 represents an entire frame.
 
 ![In game screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_vis.jpg) 
 
@@ -29,9 +31,8 @@ It is recommended to use the [build](https://github.com/milostosic/build) system
 Build
 ======
 
-MTuner SDK GENie script can generate Microsoft Visual Studio solution or 
-makefiles for a GCC based compiler or cross compiler. Generating a MSVC
-solution is done using the following command:
+GENie script can generate Microsoft Visual Studio solution or makefiles for a GCC based compiler or cross compiler. Generating a MSVC
+solution, for example, is done using the following command:
 
       genie vs2017
 
@@ -62,7 +63,9 @@ Browser inspector
 
 Captured frame profiles can be saved to binary files for offline inspection.
 The browser based inspector is built using Emscripten. Makefile is included for convenience.
-Browser inspector is based on [ImGui](https://github.com/ocornut/imgui) and is interacive provinding zooming and panning as well as statistical overview of the frame.
+Browser inspector is based on [ImGui](https://github.com/ocornut/imgui) and is interacive provinding zooming and panning as well as statistical overview of the frame.  
+
+Viewer is browser based in order to be able to use it as a part of QA pipeline during development process.  
 
 ![Inspector screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_browser.jpg) 
 
