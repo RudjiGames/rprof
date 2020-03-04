@@ -166,16 +166,16 @@ typedef struct ProfilerFrame
 
 #ifdef __cplusplus
 
-struct rpofScoped
+struct rprofScoped
 {
 	uintptr_t	m_scope;
 
-	rpofScoped(const char* _file, int _line, const char* _name)
+	rprofScoped(const char* _file, int _line, const char* _name)
 	{
 		m_scope = rprofBeginScope(_file, _line, _name);
 	}
 
-	~rpofScoped()
+	~rprofScoped()
 	{
 		rprofEndScope(m_scope);
 	}
@@ -190,7 +190,7 @@ struct rpofScoped
 #define RPROF_CONCAT(_x, _y) RPROF_CONCAT2(_x, _y)
 
 #define RPROF_INIT()				rprofInit()
-#define RPROF_SCOPE(x, ...)			rpofScoped RPROF_CONCAT(profileScope,__LINE__)(__FILE__, __LINE__, x)
+#define RPROF_SCOPE(x, ...)			rprofScoped RPROF_CONCAT(profileScope,__LINE__)(__FILE__, __LINE__, x)
 #define RPROF_BEGIN_FRAME()			rprofBeginFrame()
 #define RPROF_REGISTER_THREAD(n)	rprofRegisterThread(n)
 #define RPROF_SHUTDOWN()			rprofShutDown()

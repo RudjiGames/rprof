@@ -9,9 +9,9 @@
 #include "../inc/rprof.h"
 #include "rprof_config.h"
 
-#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
-
 namespace rprof {
+
+#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
 
 	static inline uint32_t tlsAllocate()
 	{
@@ -34,8 +34,6 @@ namespace rprof {
 	}
 
 #elif RPROF_PLATFORM_PS4
-
-namespace rprof {
 
 	static inline uint32_t tlsAllocate()
 	{
@@ -60,8 +58,6 @@ namespace rprof {
 	}
 
 #elif RPROF_PLATFORM_POSIX
-
-namespace rprof {
 
 	static inline uint32_t tlsAllocate()
 	{
