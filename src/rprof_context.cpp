@@ -115,10 +115,7 @@ void ProfilerContext::beginFrame()
 		if (scope->m_start == scope->m_end)
 			m_scopesCapture[scopesToRestart++] = scope;
 		else
-		{
 			rprofFreeListFree(&m_scopesAllocator, scope);
-			scope = &scopesDisplay[i];
-		}
 
 		// did scope cross threshold?
 		if (level == (int)scope->m_level)
