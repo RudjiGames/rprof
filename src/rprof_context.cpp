@@ -218,8 +218,8 @@ const char* ProfilerContext::addString(const char* _name, bool _capture)
 
 	nameSize += len;
 	char* dest = &nameData[storageOffset];
-	strncpy(dest, _name, RPROF_TEXT_MAX - storageOffset);
-	dest[RPROF_TEXT_MAX - storageOffset - 1] = 0;
+	strncpy(dest, _name, len);
+	dest[len] = 0;
 	return dest;
 }
 
