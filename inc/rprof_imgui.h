@@ -85,6 +85,23 @@
 		return col;
 	}
 
+	struct SortScopes
+	{
+		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
+		{
+			if (a.m_threadID < b.m_threadID)	return true;
+			if (b.m_threadID < a.m_threadID)	return false;
+
+			if (a.m_level < b.m_level) return true;
+			if (b.m_level < a.m_level) return false;
+
+			if (a.m_start < b.m_start) return true;
+			if (b.m_start < a.m_start) return false;
+
+			return false;
+		}
+	} customLess;
+
 	/* Draws a frame capture inspector dialog using ImGui. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
 	/* _buffer     - buffer to store data to */
@@ -93,6 +110,8 @@
 	int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true)
 	{
 		int ret = 0;
+
+		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
 		ImGui::SetNextWindowPos(ImVec2(10.0f, 60.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(900.0f, 450.0f), ImGuiCond_FirstUseEver);

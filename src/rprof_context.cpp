@@ -9,9 +9,6 @@
 #include "rprof_context.h"
 #include "rprof_tls.h"
 
-#include <assert.h>
-#include <algorithm>
-
 extern "C" uint64_t rprofGetClockFrequency();
 
 namespace rprof {
@@ -69,23 +66,6 @@ void ProfilerContext::unregisterThread(uint64_t _threadID)
 	m_threadNames.erase(_threadID);
 }
 
-struct SortScopes
-{
-	bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
-	{
-		if (a.m_threadID < b.m_threadID)	return true;
-		if (b.m_threadID < a.m_threadID)	return false;
-
-		if (a.m_level < b.m_level) return true;
-		if (b.m_level < a.m_level) return false;
-
-		if (a.m_start < b.m_start) return true;
-		if (b.m_start < a.m_start) return false;
-
-		return false;
-	}
-} customLess;
-
 void ProfilerContext::beginFrame()
 {
 	ScopedMutexLocker lock(m_mutex);
@@ -137,7 +117,6 @@ void ProfilerContext::beginFrame()
 	if (!m_pauseProfiling && m_thresholdCrossed)
 	{
 		memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
-		std::sort(&m_scopesDisplay[0], &m_scopesDisplay[m_scopesOpen], customLess);
 
 		m_namesSizeDisplay	= 0;
 		m_displayScopes		= m_scopesOpen;
