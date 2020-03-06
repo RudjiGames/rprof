@@ -142,6 +142,7 @@ void ProfilerContext::beginFrame()
 		memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
 		std::sort(&m_scopesDisplay[0], &m_scopesDisplay[m_scopesOpen], customLess);
 
+		m_namesSizeDisplay	= 0;
 		m_displayScopes		= m_scopesOpen;
 		m_frameStartTime	= frameBeginTime;
 		m_frameEndTime		= frameEndTime;
@@ -150,8 +151,9 @@ void ProfilerContext::beginFrame()
 			m_scopesDisplay[i].m_name = addString(m_scopesDisplay[i].m_name, false);
 	}
 
-	m_scopesOpen	= scopesToRestart;
-	frameTime		= frameEndTime - frameBeginTime;
+	m_scopesOpen		= scopesToRestart;
+	m_namesSizeCapture	= 0;
+	frameTime			= frameEndTime - frameBeginTime;
 }
 
 int ProfilerContext::incLevel()
