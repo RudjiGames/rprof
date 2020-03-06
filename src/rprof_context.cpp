@@ -199,6 +199,9 @@ ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const c
 
 void ProfilerContext::endScope(ProfilerScope* _scope)
 {
+	if (!_scope)
+		return;
+
 	ScopedMutexLocker lock(m_mutex);
 	_scope->m_end = rprofGetClock();
 	decLevel();
