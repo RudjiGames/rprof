@@ -157,15 +157,19 @@ void ProfilerContext::decLevel()
 
 ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const char* _name)
 {
-	ScopedMutexLocker lock(m_mutex);
-	if (m_scopesOpen == RPROF_SCOPES_MAX)
-		return 0;
+	ProfilerScope* scope = 0;
+	{
+		ScopedMutexLocker lock(m_mutex);
+		if (m_scopesOpen == RPROF_SCOPES_MAX)
+			return 0;
 
-	ProfilerScope* scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
-	m_scopesCapture[m_scopesOpen++] = scope;
+		scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
+		m_scopesCapture[m_scopesOpen++] = scope;
+
+		scope->m_name	= addString(_name);
+	}
 
 	scope->m_threadID	= getThreadID();
-	scope->m_name		= addString(_name);
 	scope->m_file		= _file;
 	scope->m_line		= _line;
 	scope->m_level		= incLevel();
@@ -180,7 +184,6 @@ void ProfilerContext::endScope(ProfilerScope* _scope)
 	if (!_scope)
 		return;
 
-	ScopedMutexLocker lock(m_mutex);
 	_scope->m_end = rprofGetClock();
 	decLevel();
 }
