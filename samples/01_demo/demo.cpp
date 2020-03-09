@@ -21,7 +21,7 @@ static void func3()
 {
 	RPROF_SCOPE("func3");
 	rtm::Thread::sleep(random(2));
-	for (int i=0; i<random(5); ++i)
+	for (int i=0; i<random(3); ++i)
 		func4();
 }
 
@@ -29,7 +29,7 @@ static void func2()
 {
 	RPROF_SCOPE("func2");
 	rtm::Thread::sleep(random(2));
-	for (int i=0; i<random(5); ++i)
+	for (int i=0; i<random(3); ++i)
 		func3();
 }
 
