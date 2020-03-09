@@ -406,7 +406,9 @@ extern "C" {
 
 	uint64_t rprofGetClock()
 	{
-#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
+#if   RPROF_PLATFORM_WINDOWS
+		uint64_t q = __rdtsc();
+#elif RPROF_PLATFORM_XBOXONE
 		LARGE_INTEGER li;
 		QueryPerformanceCounter(&li);
 		int64_t q = li.QuadPart;
@@ -426,7 +428,26 @@ extern "C" {
 
 	uint64_t rprofGetClockFrequency()
 	{
-#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
+#if   RPROF_PLATFORM_WINDOWS
+		static uint64_t frequency = 1;
+		static bool initialized = false;
+		if (!initialized)
+		{
+			LARGE_INTEGER li1, li2;
+			QueryPerformanceCounter(&li1);
+			uint64_t tsc1 = __rdtsc();
+			for (int i=0; i<230000000; ++i);
+			uint64_t tsc2 = __rdtsc();
+			QueryPerformanceCounter(&li2);
+
+			LARGE_INTEGER lif;
+			QueryPerformanceFrequency(&lif);
+			uint64_t time = ((li2.QuadPart - li1.QuadPart) * 1000) / lif.QuadPart;
+			frequency = (uint64_t)(1000 * ((tsc2-tsc1)/time));
+			initialized = true;
+		}
+		return frequency; 
+#elif RPROF_PLATFORM_XBOXONE
 		LARGE_INTEGER li;
 		QueryPerformanceFrequency(&li);
 		return li.QuadPart;

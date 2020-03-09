@@ -95,7 +95,10 @@ void ProfilerContext::beginFrame()
 		if (scope->m_start == scope->m_end)
 			m_scopesCapture[scopesToRestart++] = scope;
 		else
+		{
 			rprofFreeListFree(&m_scopesAllocator, scope);
+			scope = &scopesDisplay[i];
+		}
 
 		// did scope cross threshold?
 		if (level == (int)scope->m_level)
@@ -104,7 +107,8 @@ void ProfilerContext::beginFrame()
 			if (scope->m_start == scope->m_end)
 				scopeEnd = frameEndTime;
 
-			if (m_timeThreshold <= rprofClock2ms(scopeEnd - scope->m_start, rprofGetClockFrequency()))
+			float scopeTime = rprofClock2ms(scopeEnd - scope->m_start, rprofGetClockFrequency());
+			if (m_timeThreshold <= scopeTime)
 				m_thresholdCrossed = true;
 		}
 	}
@@ -114,7 +118,7 @@ void ProfilerContext::beginFrame()
 	if ((level == -1) && (m_timeThreshold <= prevFrameTime))
 		m_thresholdCrossed = true;
 
-	if (!m_pauseProfiling && m_thresholdCrossed)
+	if (m_thresholdCrossed && !m_pauseProfiling)
 	{
 		memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
 

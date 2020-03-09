@@ -6,39 +6,38 @@
 #include <demo_pch.h>
 #include <rprof/inc/rprof_imgui.h>
 
-int random(int max)
+static int random(int max)
 {
 	return 1 + rand() % (max>1?max-1:1);
 }
 
-static void func4()
+static void busyCPU()
 {
-	RPROF_SCOPE("func1");
-	rtm::Thread::sleep(random(1));
+   uint32_t loopCnt = (rand() % 1000) * 500;
+   for (uint32_t i=0; i<loopCnt; ++i);
 }
 
-static void func3()
+static void func(int level=1)
 {
-	RPROF_SCOPE("func3");
-	rtm::Thread::sleep(random(2));
-	for (int i=0; i<random(3); ++i)
-		func4();
-}
+	static char scopeName[6];
+	static bool scopeNameInit = false;
+	if (!scopeNameInit)
+	{
+		strcpy(scopeName, "funcX");
+		scopeNameInit = true;
+	}
 
-static void func2()
-{
-	RPROF_SCOPE("func2");
-	rtm::Thread::sleep(random(2));
-	for (int i=0; i<random(3); ++i)
-		func3();
-}
+	scopeName[4] = '0' + (char)level;
 
-static void func1()
-{
-	RPROF_SCOPE("func1");
-	rtm::Thread::sleep(random(2));
-	func2();
-	rtm::Thread::sleep(random(2));
+	RPROF_SCOPE(scopeName);
+	busyCPU();
+	if (level < 5)
+	{
+		int cnt = random(3);
+		for (int i=0; i<cnt; ++i)
+			func(level+1);
+		busyCPU();
+	}
 }
 
 struct rprofApp : public rapp::App
@@ -88,7 +87,7 @@ struct rprofApp : public rapp::App
 	{
 		RPROF_SCOPE("Update");
 		m_time += _time;
-		rtm::Thread::sleep(random(1));
+		busyCPU();
 	}
 
 	void draw()
@@ -96,9 +95,9 @@ struct rprofApp : public rapp::App
 		RPROF_BEGIN_FRAME();
 		appRunOnMainThread(mainThreadFunc, this);
 
-		func1();
-		rtm::Thread::sleep(random(2));
-		func1();
+		func();
+		busyCPU();
+		func();
 
 		// Set view 0 default viewport.
 		bgfx::setViewRect(0, 0, 0, (uint16_t)m_width, (uint16_t)m_height);
@@ -149,7 +148,7 @@ struct rprofApp : public rapp::App
 	static void mainThreadFunc(void* /*_appClass*/)
 	{
 		RPROF_SCOPE("main thread");
-		rtm::Thread::sleep(random(12));
+		func();
 	}
 
 	static void registerMainThread(void* /*_appClass*/)
