@@ -78,25 +78,19 @@
 #elif RPROF_PLATFORM_PS3
 	#include <sys/ppu_thread.h>
 	#include <sys/sys_time.h>
-	#include <cell/dbg.h>
 #elif RPROF_PLATFORM_PS4
 	#define _SYS__STDINT_H_
 	#include <kernel.h>
-	#include <stdio.h>	// FILE
-#elif RPROF_PLATFORM_LINUX || RPROF_PLATFORM_OSX
-	#include <pthread.h>
-	#include <unistd.h> // syscall
-	#include <sys/time.h>
-	#include <sys/syscall.h>
-	#include <execinfo.h>
 #elif RPROF_PLATFORM_ANDROID
-	#include <unwind.h>
 	#include <pthread.h>
 	#include <time.h>
 #elif RPROF_PLATFORM_EMSCRIPTEN
 	#include <pthread.h>
 	#include <time.h>
 	#include <emscripten.h>
+#elif RPROF_PLATFORM_POSIX
+	#include <pthread.h>
+	#include <sys/time.h>
 #else
 	#error "Unsupported platform!"
 #endif

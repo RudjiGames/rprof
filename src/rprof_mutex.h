@@ -33,29 +33,6 @@ namespace rprof {
 		LeaveCriticalSection(_mutex);
 	}
 
-#elif RPROF_PLATFORM_LINUX || RPROF_PLATFORM_OSX || RPROF_PLATFORM_ANDROID || RPROF_PLATFORM_EMSCRIPTEN
-	typedef pthread_mutex_t rprof_mutex;
-
-	static inline void rprof_mutex_init(rprof_mutex* _mutex) {
-		pthread_mutex_init(_mutex, NULL);
-	}
-
-	static inline void rprof_mutex_destroy(rprof_mutex* _mutex) {
-		pthread_mutex_destroy(_mutex);
-	}
-
-	static inline void rprof_mutex_lock(rprof_mutex* _mutex) {
-		pthread_mutex_lock(_mutex);
-	}
-
-	static inline int rprof_mutex_trylock(rprof_mutex* _mutex) {
-		return pthread_mutex_trylock(_mutex);
-	}
-
-	static inline void rprof_mutex_unlock(rprof_mutex* _mutex) {
-		pthread_mutex_unlock(_mutex);
-	}
-	
 #elif RPROF_PLATFORM_PS3
 	typedef sys_lwmutex_t rprof_mutex;
 
@@ -108,7 +85,30 @@ namespace rprof {
 	static inline void rprof_mutex_unlock(rprof_mutex* _mutex) {
 		scePthreadMutexUnlock(_mutex);
 	}
-	
+
+#elif RPROF_PLATFORM_POSIX
+	typedef pthread_mutex_t rprof_mutex;
+
+	static inline void rprof_mutex_init(rprof_mutex* _mutex) {
+		pthread_mutex_init(_mutex, NULL);
+	}
+
+	static inline void rprof_mutex_destroy(rprof_mutex* _mutex) {
+		pthread_mutex_destroy(_mutex);
+	}
+
+	static inline void rprof_mutex_lock(rprof_mutex* _mutex) {
+		pthread_mutex_lock(_mutex);
+	}
+
+	static inline int rprof_mutex_trylock(rprof_mutex* _mutex) {
+		return pthread_mutex_trylock(_mutex);
+	}
+
+	static inline void rprof_mutex_unlock(rprof_mutex* _mutex) {
+		pthread_mutex_unlock(_mutex);
+	}
+
 #endif
 
 	class Mutex
