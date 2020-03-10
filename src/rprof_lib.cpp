@@ -407,7 +407,13 @@ extern "C" {
 	uint64_t rprofGetClock()
 	{
 #if   RPROF_PLATFORM_WINDOWS
+	#if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
 		uint64_t q = __rdtsc();
+	#else
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		int64_t q = li.QuadPart;
+	#endif
 #elif RPROF_PLATFORM_XBOXONE
 		LARGE_INTEGER li;
 		QueryPerformanceCounter(&li);
@@ -448,11 +454,11 @@ extern "C" {
 			initialized = true;
 		}
 		return frequency;
-	#else // defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
+	#else
 		LARGE_INTEGER li;
 		QueryPerformanceFrequency(&li);
 		return li.QuadPart;
-	#endif // defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
+	#endif
 #elif RPROF_PLATFORM_XBOXONE
 		LARGE_INTEGER li;
 		QueryPerformanceFrequency(&li);
