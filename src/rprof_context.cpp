@@ -107,8 +107,7 @@ void ProfilerContext::beginFrame()
 			if (scope->m_start == scope->m_end)
 				scopeEnd = frameEndTime;
 
-			float scopeTime = rprofClock2ms(scopeEnd - scope->m_start, rprofGetClockFrequency());
-			if (m_timeThreshold <= scopeTime)
+			if (m_timeThreshold <= rprofClock2ms(scopeEnd - scope->m_start, rprofGetClockFrequency()))
 				m_thresholdCrossed = true;
 		}
 	}
