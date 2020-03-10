@@ -8,6 +8,7 @@
 
 #include "rprof.h"
 #include <algorithm>
+#include <inttypes.h>
 
 	#define RPROF_DESIRED_FRAME_RATE	 30.0f
 	#define RPROF_MINIMUM_FRAME_RATE	 20.0f
@@ -366,7 +367,7 @@
 					}
 				tlt.x += 3;
 				char buffer[512];
-				sprintf(buffer, "%s  -  0x%llx", threadName, threadID);
+				sprintf(buffer, "%s  -  0x%" PRIx64, threadName, threadID);
 				draw_list->AddText(tlt, IM_COL32(255, 255, 255, 255), buffer);
 				draw_list->PopClipRect();
 
