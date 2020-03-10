@@ -114,7 +114,7 @@
 		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
 		ImGui::SetNextWindowPos(ImVec2(10.0f, 60.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(900.0f, 450.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(900.0f, 480.0f), ImGuiCond_FirstUseEver);
 
 		static bool pause = false;
 		bool noMove = (pause && _inGame) || !_inGame;
@@ -355,7 +355,7 @@
 				ImVec2 tlt = ImVec2(frameStartX,	frameStartY);
 				ImVec2 brt = ImVec2(frameEndX,		frameStartY + barHeight);
 
-				ImGui::PushClipRect(tlt, brt, false);
+				draw_list->PushClipRect(tlt, brt);
 				draw_list->AddRectFilled(tlt, brt, IM_COL32(45, 45, 60, 255));
 				const char* threadName = "Unnamed thread";
 				for (uint32_t j=0; j<_data->m_numThreads; ++j)
@@ -368,7 +368,7 @@
 				char buffer[512];
 				sprintf(buffer, "%s  -  0x%llx", threadName, threadID);
 				draw_list->AddText(tlt, IM_COL32(255, 255, 255, 255), buffer);
-				ImGui::PopClipRect();
+				draw_list->PopClipRect();
 
 				frameStartY		+= barHeight;
 				writeThreadName	 = false;
@@ -408,11 +408,11 @@
 			if ((thresholdLevel == (int)cs.m_level + 1) && (threshold <= rprofClock2ms(cs.m_end - cs.m_start, _data->m_CPUFrequency)))
 				flashColor(drawColor, currTime - _data->m_endtime);
 
-			ImGui::PushClipRect(tl, br, false);
+			draw_list->PushClipRect(tl, br);
 			draw_list->AddRectFilled(tl, br, drawColor);
 			tl.x += 3;
 			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
-			ImGui::PopClipRect();
+			draw_list->PopClipRect();
 
 			if (ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsWindowHovered())
 			{
@@ -522,7 +522,7 @@
 
 			char buffer[1024];
 			sprintf(buffer, "[%d] %s", cs.m_stats->m_occurences, cs.m_name);
-			draw_list->PushClipRect(tl, br, true);
+			draw_list->PushClipRect(tl, br);
 			draw_list->AddRectFilled(tl, br, drawColor);
 			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), buffer);
 			draw_list->AddText(ImVec2(startX + 1, frameStartY + 1), IM_COL32(255, 255, 255, 255), buffer);
@@ -531,7 +531,7 @@
 			if (hoverRow && ImGui::IsWindowHovered())
 			{
 				ImVec2 htl = ImVec2(endX, frameStartY);
-				draw_list->PushClipRect(htl, brE, true);
+				draw_list->PushClipRect(htl, brE);
 				draw_list->AddRectFilled(htl, brE, IM_COL32(64,64,64,255));
 				draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), buffer);
 				draw_list->AddText(ImVec2(startX + 1, frameStartY + 1), IM_COL32(192, 192, 192, 255), buffer);
