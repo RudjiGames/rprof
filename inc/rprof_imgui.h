@@ -355,7 +355,7 @@
 				ImVec2 tlt = ImVec2(frameStartX,	frameStartY);
 				ImVec2 brt = ImVec2(frameEndX,		frameStartY + barHeight);
 
-				draw_list->PushClipRect(tlt, brt, true);
+				ImGui::PushClipRect(tlt, brt, false);
 				draw_list->AddRectFilled(tlt, brt, IM_COL32(45, 45, 60, 255));
 				const char* threadName = "Unnamed thread";
 				for (uint32_t j=0; j<_data->m_numThreads; ++j)
@@ -368,14 +368,20 @@
 				char buffer[512];
 				sprintf(buffer, "%s  -  0x%llx", threadName, threadID);
 				draw_list->AddText(tlt, IM_COL32(255, 255, 255, 255), buffer);
-				draw_list->PopClipRect();
+				ImGui::PopClipRect();
 
 				frameStartY		+= barHeight;
 				writeThreadName	 = false;
 			}
 
-			float startXpct = float(cs.m_start	- _data->m_startTime) / float(totalTime);
-			float endXpct	= float(cs.m_end	- _data->m_startTime) / float(totalTime);
+			// handle wrap around
+			int64_t sX = int64_t(cs.m_start	- _data->m_startTime);
+			if (sX < 0) sX = -sX;
+			int64_t eX = int64_t(cs.m_end - _data->m_startTime);
+			if (eX < 0) eX = -eX;
+
+			float startXpct = float(sX) / float(totalTime);
+			float endXpct	= float(eX) / float(totalTime);
 
 			float startX	= paz.w2s(startXpct, frameStartX, frameEndX);
 			float endX		= paz.w2s(endXpct  , frameStartX, frameEndX);
@@ -402,11 +408,11 @@
 			if ((thresholdLevel == (int)cs.m_level + 1) && (threshold <= rprofClock2ms(cs.m_end - cs.m_start, _data->m_CPUFrequency)))
 				flashColor(drawColor, currTime - _data->m_endtime);
 
-			draw_list->PushClipRect(tl, br, true);
+			ImGui::PushClipRect(tl, br, false);
 			draw_list->AddRectFilled(tl, br, drawColor);
 			tl.x += 3;
 			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
-			draw_list->PopClipRect();
+			ImGui::PopClipRect();
 
 			if (ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsWindowHovered())
 			{
