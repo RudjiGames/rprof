@@ -24,8 +24,9 @@
     </div>
 
     <script type='text/javascript'>
-      var capturePath = location.search.split('path=')[1] ? location.search.split('path=')[1] : 'localhost/';
-	  var captureFile = location.search.split('file=')[1] ? location.search.split('file=')[1] : 'capture.rprof';
+      const params = new URLSearchParams(new URL(window.location).search)
+      var capturePath = params.get('path') ? params.get('path') : 'localhost/';
+	  var captureFile = params.get('file') ? params.get('file') : 'capture.rprof';
       var Module = {
 		arguments: [capturePath, captureFile],
         preRun: [],

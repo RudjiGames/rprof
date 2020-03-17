@@ -142,14 +142,17 @@ extern "C" int main(int argc, char** argv)
 {
 	if (init() != 0) return 1;
 #ifdef __EMSCRIPTEN__
-	printf("Downloading capture...\n");
 
 	// path to capture passed via URL query, arguments are 'path' and 'file'
-	// http://localhost/profile_inspector/imgui.html?path=http://localhost/profile_inspector/#file=capture.rprof
+	// http://localhost/profile_inspector/imgui.html?path=http://localhost/profile_inspector/?file=capture.rprof
 
 	char pathBuffer[1024];
 	strcpy(pathBuffer,argv[1]);
 	strcat(pathBuffer,argv[2]);
+
+	printf("Path: %s\n", argv[1]);
+	printf("File: %s\n", argv[2]);
+	printf("Downloading %s\n", pathBuffer);
 
 	emscripten_async_wget(pathBuffer, argv[2], profilerFrameLoadCallback, profilerFrameLoadError);
 
