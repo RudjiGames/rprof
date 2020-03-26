@@ -24,9 +24,9 @@
 		IM_COL32(250,  50,   0, 255)
 	};
 
-	static uint64_t	s_timeSinceStatClicked	= rprofGetClock();
-	static char		s_statClickedName[1024]	= { 0 };
-	static uint32_t	s_statClickedLevel		= 0;
+	static uint64_t		s_timeSinceStatClicked	= rprofGetClock();
+	static const char*	s_statClickedName		= 0;
+	static uint32_t		s_statClickedLevel		= 0;
 
 	struct PanAndZoon
 	{
@@ -402,8 +402,8 @@
 			if (ImGui::IsMouseClicked(0) && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsWindowHovered())
 			{
 				s_timeSinceStatClicked	= currTime;
-				strcpy(s_statClickedName, cs.m_name);
-				s_statClickedLevel = cs.m_level;
+				s_statClickedName		= cs.m_name;
+				s_statClickedLevel		= cs.m_level;
 			}
 
 			if ((thresholdLevel == (int)cs.m_level + 1) && (threshold <= rprofClock2ms(cs.m_end - cs.m_start, _data->m_CPUFrequency)))
@@ -515,8 +515,8 @@
 			if (ImGui::IsMouseClicked(0) && hoverRow && ImGui::IsWindowHovered())
 			{
 				s_timeSinceStatClicked	= rprofGetClock();
-				strcpy(s_statClickedName, cs.m_name);
-				s_statClickedLevel = cs.m_level;
+				s_statClickedName		= cs.m_name;
+				s_statClickedLevel		= cs.m_level;
 			}
 
 			flashColorNamed(drawColor, cs, rprofGetClock() - s_timeSinceStatClicked);
