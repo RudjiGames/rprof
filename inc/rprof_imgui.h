@@ -367,7 +367,7 @@
 					}
 				tlt.x += 3;
 				char buffer[512];
-				sprintf(buffer, "%s  -  0x%" PRIx64, threadName, threadID);
+				snprintf(buffer, 512, "%s  -  0x%" PRIx64, threadName, threadID);
 				draw_list->AddText(tlt, IM_COL32(255, 255, 255, 255), buffer);
 				draw_list->PopClipRect();
 
@@ -522,7 +522,7 @@
 			flashColorNamed(drawColor, cs, rprofGetClock() - s_timeSinceStatClicked);
 
 			char buffer[1024];
-			sprintf(buffer, "[%d] %s", cs.m_stats->m_occurences, cs.m_name);
+			snprintf(buffer, 1024, "[%d] %s", cs.m_stats->m_occurences, cs.m_name);
 			draw_list->PushClipRect(tl, br, true);
 			draw_list->AddRectFilled(tl, br, drawColor);
 			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), buffer);
