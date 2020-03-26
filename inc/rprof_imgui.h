@@ -74,7 +74,7 @@
 
 	void flashColorNamed(ImU32& _drawColor, ProfilerScope& _cs, uint64_t _elapsedTime)
 	{
-		if ((strcmp(_cs.m_name, s_statClickedName) == 0) && (_cs.m_level == s_statClickedLevel))
+		if (s_statClickedName && (strcmp(_cs.m_name, s_statClickedName) == 0) && (_cs.m_level == s_statClickedLevel))
 			flashColor(_drawColor, _elapsedTime);
 	}
 
