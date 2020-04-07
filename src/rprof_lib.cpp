@@ -283,6 +283,13 @@ extern "C" {
 			readVar(buffer, scope.m_line);
 			readVar(buffer, scope.m_level);
 
+			//if (scope.m_end < scope.m_start)
+			//{
+			//	uint64_t swap = scope.m_end;
+			//	scope.m_end = scope.m_start;
+			//	scope.m_start = swap;
+			//}
+
 			scope.m_stats->m_inclusiveTime	= scope.m_end - scope.m_start;
 			scope.m_stats->m_exclusiveTime	= scope.m_stats->m_inclusiveTime;
 			scope.m_stats->m_occurences		= 0;
@@ -343,7 +350,14 @@ extern "C" {
 			ProfilerScope& scopeI = _data->m_scopes[i];
 			ProfilerScope& scopeJ = _data->m_scopes[j];
 
-			if ((scopeJ.m_start > scopeI.m_start) && (scopeJ.m_end < scopeI.m_end) && (scopeJ.m_level == scopeI.m_level + 1))
+			int64_t sxI = int64_t(scopeI.m_start - _data->m_startTime) & 0xffffffff;
+			int64_t exI = int64_t(scopeI.m_end   - _data->m_startTime) & 0xffffffff;
+
+			int64_t sxJ = int64_t(scopeJ.m_start - _data->m_startTime) & 0xffffffff;
+			int64_t exJ = int64_t(scopeJ.m_end   - _data->m_startTime) & 0xffffffff;
+
+			if ((scopeJ.m_start > scopeI.m_start) && (scopeJ.m_end < scopeI.m_end) &&
+				(scopeJ.m_level == scopeI.m_level + 1) && (scopeJ.m_threadID == scopeI.m_threadID))
 				scopeI.m_stats->m_exclusiveTime -= scopeJ.m_stats->m_inclusiveTime;
 		}
 

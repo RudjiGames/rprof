@@ -19,7 +19,7 @@ USE_WASM = -s WASM=1
 PROJECTS :=  gui
 
 GUI: 
-	$(CXX)  $(SOURCES) -o $(OUTPUT) $(LIBS) $(WEBGL_VER) $(FILE_SYSTEM) -O2 --preload-file data $(USE_WASM)
+	$(CXX)  $(SOURCES) -o $(OUTPUT) $(LIBS) $(WEBGL_VER) $(FILE_SYSTEM) -O2 --no-heap-copy -s ALLOW_MEMORY_GROWTH=1 --preload-file data $(USE_WASM)
 
 all: $(GUI)
 

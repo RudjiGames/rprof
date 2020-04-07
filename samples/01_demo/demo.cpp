@@ -136,6 +136,27 @@ struct rprofApp : public rapp::App
 			rprofLoad(&data2, buffer, size);
 			data2.m_CPUFrequency = 0;
 		}
+
+		// Example of writing multi-frame data
+
+		/*
+		static bool headerWritten = false;
+		FILE* file = 0;
+		if (!headerWritten)
+		{
+			uint32_t sig = 0x23232323;
+			file = fopen("capture.rprofm", "wb");
+			fwrite(&sig, 1, 4, file);
+			fclose(file);
+			headerWritten = true;
+		}
+
+		uint32_t size = rprofSave(&data, buffer, 10 * 1024);
+		file = fopen("capture.rprofm", "ab");
+		fwrite(&size, 4, 1, file);
+		fwrite(buffer, 1, size, file);
+		fclose(file);
+		*/
 	}
 	
 	void shutDown()
