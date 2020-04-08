@@ -200,6 +200,12 @@ extern "C" {
 		uint8_t* buffer = new uint8_t[totalSize];
 		uint8_t* bufPtr = buffer;
 
+		writeVar(buffer, _data->m_startTime);
+		writeVar(buffer, _data->m_endtime);
+		writeVar(buffer, _data->m_prevFrameTime);
+		writeVar(buffer, _data->m_platformID);
+		writeVar(buffer, rprofGetClockFrequency());
+
 		// write scopes
 		writeVar(buffer, _data->m_numScopes);
 		for (uint32_t i=0; i<_data->m_numScopes; ++i)
@@ -222,12 +228,6 @@ extern "C" {
 			writeVar(buffer, t.m_threadID);
 			writeVar(buffer, strStore.getString(t.m_name));
 		}
-
-		writeVar(buffer, _data->m_startTime);
-		writeVar(buffer, _data->m_endtime);
-		writeVar(buffer, _data->m_prevFrameTime);
-		writeVar(buffer, _data->m_platformID);
-		writeVar(buffer, rprofGetClockFrequency());
 
 		// write string data
 		uint32_t numStrings = (uint32_t)strStore.m_strings.size();
@@ -261,6 +261,12 @@ extern "C" {
 
 		uint32_t strIdx;
 
+		readVar(buffer, _data->m_startTime);
+		readVar(buffer, _data->m_endtime);
+		readVar(buffer, _data->m_prevFrameTime);
+		readVar(buffer, _data->m_platformID);
+		readVar(buffer, _data->m_CPUFrequency);
+
 		// read scopes
 		readVar(buffer, _data->m_numScopes);
 		_data->m_scopes			= new ProfilerScope[_data->m_numScopes * 2]; // extra space for viewer - m_scopesStats
@@ -283,13 +289,6 @@ extern "C" {
 			readVar(buffer, scope.m_line);
 			readVar(buffer, scope.m_level);
 
-			//if (scope.m_end < scope.m_start)
-			//{
-			//	uint64_t swap = scope.m_end;
-			//	scope.m_end = scope.m_start;
-			//	scope.m_start = swap;
-			//}
-
 			scope.m_stats->m_inclusiveTime	= scope.m_end - scope.m_start;
 			scope.m_stats->m_exclusiveTime	= scope.m_stats->m_inclusiveTime;
 			scope.m_stats->m_occurences		= 0;
@@ -305,12 +304,6 @@ extern "C" {
 			readVar(buffer, strIdx);
 			t.m_name = (const char*)(uintptr_t)strIdx;
 		}
-
-		readVar(buffer, _data->m_startTime);
-		readVar(buffer, _data->m_endtime);
-		readVar(buffer, _data->m_prevFrameTime);
-		readVar(buffer, _data->m_platformID);
-		readVar(buffer, _data->m_CPUFrequency);
 
 		// read string data
 		uint32_t numStrings;
@@ -349,12 +342,6 @@ extern "C" {
 		{
 			ProfilerScope& scopeI = _data->m_scopes[i];
 			ProfilerScope& scopeJ = _data->m_scopes[j];
-
-			int64_t sxI = int64_t(scopeI.m_start - _data->m_startTime) & 0xffffffff;
-			int64_t exI = int64_t(scopeI.m_end   - _data->m_startTime) & 0xffffffff;
-
-			int64_t sxJ = int64_t(scopeJ.m_start - _data->m_startTime) & 0xffffffff;
-			int64_t exJ = int64_t(scopeJ.m_end   - _data->m_startTime) & 0xffffffff;
 
 			if ((scopeJ.m_start > scopeI.m_start) && (scopeJ.m_end < scopeI.m_end) &&
 				(scopeJ.m_level == scopeI.m_level + 1) && (scopeJ.m_threadID == scopeI.m_threadID))
@@ -396,6 +383,39 @@ extern "C" {
 				scope.m_stats->m_occurences++;
 			}
 		}
+	}
+
+	void rprofLoadTimeOnly(float* _time, void* _buffer, size_t _bufferSize)
+	{
+		size_t		bufferSize = _bufferSize;
+		uint8_t*	buffer = 0;
+		uint8_t*	bufferPtr;
+
+		int decomp = -1;
+		do
+		{
+			delete[] buffer;
+			bufferSize *= 2;
+			buffer = new uint8_t[bufferSize];
+			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
+
+		} while (decomp < 0);
+
+		bufferPtr = buffer;
+
+		uint64_t startTime;
+		uint64_t endtime;
+		uint8_t  dummy8;
+		uint64_t frequency;
+
+		readVar(buffer, startTime);
+		readVar(buffer, endtime);
+		readVar(buffer, frequency);	// dummy
+		readVar(buffer, dummy8);	// dummy
+		readVar(buffer, frequency);
+		*_time = rprofClock2ms(endtime - startTime, frequency);
+
+		delete[] buffer;
 	}
 
 	void rprofRelease(ProfilerFrame* _data)

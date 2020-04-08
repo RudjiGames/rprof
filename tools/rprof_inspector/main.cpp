@@ -19,9 +19,6 @@
 #include "../../inc/rprof.h"
 #include "../../inc/rprof_imgui.h"
 
-GLFWwindow*		g_window;
-ImGuiContext*	imgui = 0;
-
 EM_JS(int,	canvas_get_width, (),	{ return Module.canvas.width; });
 EM_JS(int,	canvas_get_height, (),	{ return Module.canvas.height; });
 EM_JS(void,	resizeCanvas, (),		{ js_resizeCanvas(); });
@@ -32,6 +29,13 @@ struct FrameInfo
 	uint32_t	m_offset;
 	uint32_t	m_size;
 };
+
+GLFWwindow*				g_window;
+ImGuiContext*			imgui = 0;
+int						g_multi = -1;
+ProfilerFrame			g_frame;
+char					g_fileName[1024];
+std::vector<FrameInfo>	g_frameInfos;
 
 struct SortFrameInfoChrono
 {
@@ -60,7 +64,37 @@ struct SortFrameInfoAsc
 	}
 } customAsc;
 
-void profilerFrameLoadSingleOffset(uint32_t _offset, uint32_t _size);
+void profilerFrameLoad(const char* _name, uint32_t _offset = 0, uint32_t _size = 0);
+
+void rprofDrawTutorial(bool _multi)
+{
+	ImGui::SetNextWindowPos(ImVec2(10.0f, _multi ? 650.0f : 500.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(900.0f, 410.0f), ImGuiCond_FirstUseEver);
+
+	ImGui::Begin("Usage instructions");
+	ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Hovering scopes");
+	ImGui::Separator();
+	ImGui::Text("Hovering a scope will display additional information about the scope (file, line and time).");
+	ImGui::Text("Scpoes in 'Frame stats' are cumulative and will show number of occurences and frame time percentage in addition.");
+	ImGui::NewLine();
+	ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Zooming and panning");
+	ImGui::Separator();
+	ImGui::Text("Zoom in and zoom out of 'Frame inspector' is done using 'a' and 'z' keys.");
+	ImGui::Text("Zooming is centered around the mouse X axis and mouse must be hovering the 'Frame inspector'.");
+	ImGui::Text("Paning is can be done on a zoomed in 'Frame inspector' by holding down CTRL key and moving mouse left/right.");
+	ImGui::NewLine();
+	ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Clicking on scopes");
+	ImGui::Separator();
+	ImGui::Text("Clicking on a scope will highlight a scope (or all matching scopes) with the same name.");
+	ImGui::Text("This helps to locate all occurences of a scope in a frame.");
+	ImGui::NewLine();
+	ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Multi frame view");
+	ImGui::Separator();
+	ImGui::Text("If capture is multi-frame, a 'Frame navigator' window will appear.");
+	ImGui::Text("Clicking on a frame will load the profiling data for that particular frame.");
+
+	ImGui::End();
+}
 
 void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 {
@@ -110,7 +144,7 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 
 	if (ImGui::IsMouseClicked(0) && (idx != -1))
 	{
-		profilerFrameLoadSingleOffset(_infos[idx].m_offset, _infos[idx].m_size);
+		profilerFrameLoad(g_fileName, _infos[idx].m_offset, _infos[idx].m_size);
 	}
 
 	static int sc = 0;
@@ -168,47 +202,27 @@ int init()
 	return 0;
 }
 
-int						g_multi = -1;
-ProfilerFrame			g_frame;
-char					g_fileName[1024];
-std::vector<FrameInfo>	g_frameInfos;
-
 void quit()
 {
 	rprofRelease(&g_frame);
 	glfwTerminate();
 }
 
-void profilerFrameLoadSingleOffset(uint32_t _offset, uint32_t _size)
-{
-	FILE* file = fopen(g_fileName, "rb");
-	printf("%s", g_fileName);
-	if (file)
-	{
-		fseek(file, _offset + 4, SEEK_SET);
-
-		static const size_t maxDecompSize = 4 * 1024 * 1024;
-		char* compBuffer = (char*)malloc(_size);
-		char* decompBuffer = (char*)malloc(maxDecompSize);
-		char* bufferReadPtr = decompBuffer;
-
-		fread(compBuffer, 1, _size, file);
-		rprofLoad(&g_frame, compBuffer, _size);
-		free(decompBuffer);
-		free(compBuffer);
-
-		fclose(file);
-	}
-}
-
-void profilerFrameLoadSingle(const char* _name)
+void profilerFrameLoad(const char* _name, uint32_t _offset, uint32_t _size)
 {
 	FILE* file = fopen(_name, "rb");
 	if (file)
 	{
-		fseek(file, 0, SEEK_END);
-		long csize = ftell(file);
-		fseek(file, 0, SEEK_SET);
+		long csize = _size;
+
+		if (!csize)
+		{
+			fseek(file, 0, SEEK_END);
+			csize = ftell(file);
+			fseek(file, 0, SEEK_SET);
+		}
+		else
+			fseek(file, _offset + 4, SEEK_SET);
 
 		static const size_t maxDecompSize = 4 * 1024 * 1024;
 		char* compBuffer = (char*)malloc(csize);
@@ -247,20 +261,17 @@ void profilerFrameLoadMulti(const char* _name)
 			uint32_t frameSize = *reinterpret_cast<uint32_t*>(&fileBuffer[offset]);
 			offset += 4;
 
-			rprofLoad(&g_frame, &fileBuffer[offset], frameSize);
+			rprofLoadTimeOnly(&info.m_time, &fileBuffer[offset], frameSize);
 
 			info.m_size = frameSize;
-			info.m_time = rprofClock2ms(g_frame.m_endtime - g_frame.m_startTime, g_frame.m_CPUFrequency);
 			g_frameInfos.push_back(info);
 
 			rprofRelease(&g_frame);
 			offset += frameSize;
-			printf("frame \n");
 		}
-		printf("DONE\n");
 	}
 
-	profilerFrameLoadSingleOffset(g_frameInfos[0].m_offset, g_frameInfos[0].m_size);
+	profilerFrameLoad(g_fileName, g_frameInfos[0].m_offset, g_frameInfos[0].m_size);
 }
 
 void profilerFrameLoadCallback(const char* _name)
@@ -277,7 +288,7 @@ void profilerFrameLoadCallback(const char* _name)
 		if (g_multi)
 			profilerFrameLoadMulti(_name);
 		else
-			profilerFrameLoadSingle(_name);
+			profilerFrameLoad(_name);
 	}
 }
 
@@ -303,11 +314,13 @@ void loop()
 
 	if (g_multi != -1)
 	{
+		rprofDrawTutorial(g_multi == 1);
+
 		if (g_multi)
 			rprofDrawFrameNavigation(g_frameInfos.data(), g_frameInfos.size());
 
-		rprofDrawFrame(&g_frame, 0, 0, false, g_multi);
-		rprofDrawStats(&g_frame, g_multi);
+		rprofDrawFrame(&g_frame, 0, 0, false, g_multi == 1);
+		rprofDrawStats(&g_frame, g_multi == 1);
 	}
 
 	ImGui::Render();

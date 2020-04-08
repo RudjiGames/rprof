@@ -143,6 +143,12 @@ typedef struct ProfilerFrame
 	/* _bufferSize - maximum size of buffer, in bytes */
 	void rprofLoad(ProfilerFrame* _data, void* _buffer, size_t _bufferSize);
 
+	/* Loads a only time in miliseconds for a single frame capture from a binary buffer. */
+	/* _time       - [in/out] frame timne in ms. */
+	/* _buffer     - buffer to store data to */
+	/* _bufferSize - maximum size of buffer, in bytes */
+	void rprofLoadTimeOnly(float* _time, void* _buffer, size_t _bufferSize);
+
 	/* Releases resources for a single frame capture. Only valid for data loaded with rprofLoad. */
 	/* _data       - data to be released */
 	void rprofRelease(ProfilerFrame* _data);
