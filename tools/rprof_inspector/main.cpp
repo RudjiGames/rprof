@@ -101,7 +101,7 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 	ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(1510.0f, 140.0f), ImGuiCond_FirstUseEver);
 
-	ImGui::Begin("Frame navigator");
+	ImGui::Begin("Frame navigator", 0, ImGuiWindowFlags_NoScrollbar);
 
 	static int sortKind = 0;
 	ImGui::Text("Sort frames by:  ");
@@ -138,17 +138,15 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 	const ImVec2 s = ImGui::GetWindowSize();
 	const ImVec2 p = ImGui::GetWindowPos();
 
-	ImGui::BeginChild("", ImVec2(_numInfos*10,45), false, ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::BeginChild("", ImVec2(s.x, 70), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-	int idx = ImGui::PlotHistogram("", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10/*s.x - 9.0f*/, 45), sizeof(FrameInfo));
+	int idx = ImGui::PlotHistogram("", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
 
 	if (ImGui::IsMouseClicked(0) && (idx != -1))
 	{
 		profilerFrameLoad(g_fileName, _infos[idx].m_offset, _infos[idx].m_size);
 	}
 
-	static int sc = 0;
-	ImGui::SetScrollX(++sc);
 	ImGui::EndChild();
 
 	ImGui::End();
