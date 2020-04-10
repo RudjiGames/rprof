@@ -324,6 +324,7 @@
 
 		if (_data->m_numScopes == 0)
 		{
+			ImGui::TextColored(ImVec4(1.0f, 0.23f, 0.23f, 1.0f), "No scope data!");
 			ImGui::End();
 			return ret;
 		}
@@ -458,6 +459,13 @@
 		ImGui::SetNextWindowSize(ImVec2(600.0f, 900.0f), ImGuiCond_FirstUseEver);
 
 		ImGui::Begin("Frame stats");
+
+		if (_data->m_numScopes == 0)
+		{
+			ImGui::TextColored(ImVec4(1.0f,0.23f,0.23f,1.0f), "No scope data!");
+			ImGui::End();
+			return;
+		}
 
 		float deltaTime = rprofClock2ms(_data->m_endtime - _data->m_startTime, _data->m_CPUFrequency);
 

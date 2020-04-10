@@ -318,6 +318,7 @@ void loop()
 			rprofDrawFrameNavigation(g_frameInfos.data(), g_frameInfos.size());
 
 		rprofDrawFrame(&g_frame, 0, 0, false, g_multi == 1);
+
 		rprofDrawStats(&g_frame, g_multi == 1);
 	}
 
