@@ -269,6 +269,7 @@ extern "C" {
 
 		// read scopes
 		readVar(buffer, _data->m_numScopes);
+
 		_data->m_scopes			= new ProfilerScope[_data->m_numScopes * 2]; // extra space for viewer - m_scopesStats
 		_data->m_scopesStats	= &_data->m_scopes[_data->m_numScopes];
 		_data->m_scopeStatsInfo	= new ProfilerScopeStats[_data->m_numScopes * 2];

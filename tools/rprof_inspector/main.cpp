@@ -18,6 +18,11 @@
 
 #include "../../inc/rprof.h"
 #include "../../inc/rprof_imgui.h"
+#include "../../src/rprof_config.h"
+
+#if RPROF_LZ4_NO_DEFINE
+#include "../../3rd/lz4-r191/lz4.c"
+#endif
 
 EM_JS(int,	canvas_get_width, (),	{ return Module.canvas.width; });
 EM_JS(int,	canvas_get_height, (),	{ return Module.canvas.height; });
@@ -341,7 +346,7 @@ extern "C" int main(int argc, char** argv)
 #ifdef __EMSCRIPTEN__
 
 	// path to capture passed via URL query, arguments are 'path' and 'file'
-	// http://localhost/profile_inspector/imgui.html?path=http://localhost/profile_inspector/?file=capture.rprof
+	// http://localhost/profile_inspector/imgui.html?path=http://localhost/profile_inspector/&file=capture.rprof
 
 	char pathBuffer[1024];
 	strcpy(pathBuffer,argv[1]);

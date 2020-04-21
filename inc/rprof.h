@@ -19,12 +19,6 @@
 #include <stdint.h> /* uint*_t */
 #include <stddef.h> /* size_t  */
 
-/*--------------------------------------------------------------------------
- * Log version macros
- *------------------------------------------------------------------------*/
-#define RPROF_VER_HIGH			1
-#define RPROF_VER_LOW			0
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
