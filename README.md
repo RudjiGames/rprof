@@ -67,7 +67,7 @@ Browser inspector is based on [ImGui](https://github.com/ocornut/imgui) and is i
 
 Viewer is browser based in order to be able to use it as a part of QA pipeline during development process.  
 
-![Inspector screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_browser.jpg) 
+![Inspector screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_browser.gif) 
 
 Author
 ======
