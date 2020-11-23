@@ -170,14 +170,14 @@ ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const c
 		m_scopesCapture[m_scopesOpen++] = scope;
 
 		scope->m_name	= addString(_name);
+		scope->m_start	= rprofGetClock();
+		scope->m_end	= scope->m_start;
 	}
 
 	scope->m_threadID	= getThreadID();
 	scope->m_file		= _file;
 	scope->m_line		= _line;
 	scope->m_level		= incLevel();
-	scope->m_start		= rprofGetClock();
-	scope->m_end		= scope->m_start;
 
 	return scope;
 }
