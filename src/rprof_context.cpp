@@ -22,11 +22,15 @@ ProfilerContext::ProfilerContext()
 	, m_timeThreshold(0.0f)
 	, m_levelThreshold(0)
 	, m_pauseProfiling(false)
-	, m_namesSizeCapture(0)
-	, m_namesSizeDisplay(0)
 {
 	m_tlsLevel = tlsAllocate();
 	rprofFreeListCreate(sizeof(ProfilerScope), RPROF_SCOPES_MAX, &m_scopesAllocator);
+
+	for (int i=0; i<BufferUse::Count; ++i)
+	{
+		m_namesSize[i] = 0;
+		m_namesData[i] = m_namesDataBuffers[i];
+	}
 }
 
 ProfilerContext::~ProfilerContext()
@@ -84,10 +88,16 @@ void ProfilerContext::beginFrame()
 
 	uint32_t scopesToRestart = 0;
 
+	m_namesSize[BufferUse::Open] = 0;
+
 	static ProfilerScope scopesDisplay[RPROF_SCOPES_MAX];
 	for (uint32_t i=0; i<m_scopesOpen; ++i)
 	{
 		ProfilerScope* scope = m_scopesCapture[i];
+
+		if (scope->m_start == scope->m_end)
+			scope->m_name = addString(scope->m_name, BufferUse::Open);
+
 		scopesDisplay[i] = *scope;
 
 		// scope that was not closed, spans frame boundary
@@ -117,22 +127,23 @@ void ProfilerContext::beginFrame()
 	if ((level == -1) && (m_timeThreshold <= prevFrameTime))
 		m_thresholdCrossed = true;
 
+	m_namesSize[BufferUse::Capture] = 0;
+	for (uint32_t i=0; i<scopesToRestart; ++i)
+		m_scopesCapture[i]->m_name = addString(m_scopesCapture[i]->m_name, BufferUse::Capture);
+
 	if (m_thresholdCrossed && !m_pauseProfiling)
 	{
+		std::swap(m_namesData[BufferUse::Capture], m_namesData[BufferUse::Display]);
+
 		memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
 
-		m_namesSizeDisplay	= 0;
 		m_displayScopes		= m_scopesOpen;
 		m_frameStartTime	= frameBeginTime;
 		m_frameEndTime		= frameEndTime;
-
-		for (uint32_t i=0; i<m_scopesOpen; ++i)
-			m_scopesDisplay[i].m_name = addString(m_scopesDisplay[i].m_name, false);
 	}
 
-	m_scopesOpen		= scopesToRestart;
-	m_namesSizeCapture	= 0;
-	frameTime			= frameEndTime - frameBeginTime;
+	m_scopesOpen	= scopesToRestart;
+	frameTime		= frameEndTime - frameBeginTime;
 }
 
 int ProfilerContext::incLevel()
@@ -169,7 +180,7 @@ ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const c
 		scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
 		m_scopesCapture[m_scopesOpen++] = scope;
 
-		scope->m_name	= addString(_name);
+		scope->m_name	= addString(_name, BufferUse::Capture);
 		scope->m_start	= rprofGetClock();
 		scope->m_end	= scope->m_start;
 	}
@@ -191,10 +202,10 @@ void ProfilerContext::endScope(ProfilerScope* _scope)
 	decLevel();
 }
 
-const char* ProfilerContext::addString(const char* _name, bool _capture)
+const char* ProfilerContext::addString(const char* _name, BufferUse _buffer)
 {
-	char*	nameData = _capture ? m_namesDataCapture : m_namesDataDisplay;
-	int&	nameSize = _capture ? m_namesSizeCapture : m_namesSizeDisplay;
+	char*	nameData = m_namesData[_buffer];
+	int&	nameSize = m_namesSize[_buffer];
 
 	int len = (int)strlen(_name) + 1;
 	int storageOffset = nameSize;
@@ -210,6 +221,8 @@ const char* ProfilerContext::addString(const char* _name, bool _capture)
 
 void ProfilerContext::getFrameData(ProfilerFrame* _data)
 {
+	ScopedMutexLocker lock(m_mutex);
+
 	static ProfilerThread threadData[RPROF_DRAW_THREADS_MAX];
 
 	uint32_t numThreads = (uint32_t)m_threadNames.size();
