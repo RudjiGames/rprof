@@ -117,9 +117,12 @@ extern "C" {
 		g_context->setThreshold(_ms, _level);
 	}
 
-	void rprofRegisterThread(const char* _name)
+	void rprofRegisterThread(const char* _name, uint64_t _threadID)
 	{
-		g_context->registerThread(getThreadID(), _name);
+		if (_threadID == 0)
+			_threadID = getThreadID();
+
+		g_context->registerThread(_threadID, _name);
 	}
 
 	void rprofUnregisterThread(uint64_t _threadID)
@@ -157,9 +160,9 @@ extern "C" {
 		return g_context->setPaused(_paused != 0);
 	}
 
-	void rprofGetFrame(ProfilerFrame* _data)
+	uint32_t rprofGetFrame(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize)
 	{
-		g_context->getFrameData(_data);
+		uint32_t nameBuffSize = g_context->getFrameData(_data, _nameBuffer, _nameBufferSize);
 
 		// clamp scopes crossing frame boundary
 		const uint32_t numScopes = _data->m_numScopes;
@@ -174,6 +177,8 @@ extern "C" {
 					cs.m_start = _data->m_startTime;
 			}
 		}
+
+		return nameBuffSize;
 	}
 
 	int rprofSave(ProfilerFrame* _data, void* _buffer, size_t _bufferSize)

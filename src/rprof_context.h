@@ -62,7 +62,7 @@ namespace rprof {
 		ProfilerScope*	beginScope(const char* _file, int _line, const char* _name);
 		void			endScope(ProfilerScope* _scope);
 		const char*		addString(const char* _name, BufferUse _buffer);
-		void			getFrameData(ProfilerFrame* _data);
+		uint32_t		getFrameData(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize);
 	};
 
 } // namespace rprof

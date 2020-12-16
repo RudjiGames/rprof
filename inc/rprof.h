@@ -92,7 +92,8 @@ typedef struct ProfilerFrame
 
 	/* Registers thread name. */
 	/* _name     - name to use for this thread */
-	void rprofRegisterThread(const char* _name);
+	/* _threadID - ID of thread to register, 0 for current thread. */
+	void rprofRegisterThread(const char* _name, uint64_t _threadID = 0);
 
 	/* Unregisters thread name and releases name string. */
 	/* _threadID - thread ID */
@@ -122,7 +123,7 @@ typedef struct ProfilerFrame
 	void rprofSetPaused(int _paused);
 
 	/* Fetches data of the last saved frame (either threshold exceeded or profiling is paused). */
-	void rprofGetFrame(ProfilerFrame* _data);
+	uint32_t rprofGetFrame(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize);
 
 	/* Saves profiler data to a binary buffer. */
 	/* _data       - profiler data / single frame capture */

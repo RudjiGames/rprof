@@ -219,7 +219,7 @@ const char* ProfilerContext::addString(const char* _name, BufferUse _buffer)
 	return dest;
 }
 
-void ProfilerContext::getFrameData(ProfilerFrame* _data)
+uint32_t ProfilerContext::getFrameData(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize)
 {
 	ScopedMutexLocker lock(m_mutex);
 
@@ -241,6 +241,21 @@ void ProfilerContext::getFrameData(ProfilerFrame* _data)
 	_data->m_levelThreshold	= m_levelThreshold;
 	_data->m_platformID		= getPlatformID();
 
+	char* dest = _nameBuffer;
+	for (uint32_t i=0; i<m_displayScopes; ++i)
+	{
+		int len = (int)strlen(_data->m_scopes[i].m_name);
+		if (len < _nameBufferSize - (dest - _nameBuffer))
+		{
+			strcpy(dest, _data->m_scopes[i].m_name);
+			_data->m_scopes[i].m_name = dest;
+			dest[len] = 0;
+			dest += len + 1;
+		}
+		else
+			_data->m_scopes[i].m_name = "Not enough space!";
+	}
+
 	std::map<uint64_t, std::string>::iterator it = m_threadNames.begin();
 	for (uint32_t i=0; i<numThreads; ++i)
 	{
@@ -248,6 +263,8 @@ void ProfilerContext::getFrameData(ProfilerFrame* _data)
 		threadData[i].m_name		= it->second.c_str();
 		++it;
 	}
+
+	return 1 + (uint32_t)(dest - _nameBuffer);
 }
 
 } // namespace rprof
