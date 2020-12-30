@@ -160,9 +160,9 @@ extern "C" {
 		return g_context->setPaused(_paused != 0);
 	}
 
-	uint32_t rprofGetFrame(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize)
+	void rprofGetFrame(ProfilerFrame* _data)
 	{
-		uint32_t nameBuffSize = g_context->getFrameData(_data, _nameBuffer, _nameBufferSize);
+		g_context->getFrameData(_data);
 
 		// clamp scopes crossing frame boundary
 		const uint32_t numScopes = _data->m_numScopes;
@@ -177,8 +177,6 @@ extern "C" {
 					cs.m_start = _data->m_startTime;
 			}
 		}
-
-		return nameBuffSize;
 	}
 
 	int rprofSave(ProfilerFrame* _data, void* _buffer, size_t _bufferSize)

@@ -123,7 +123,7 @@ typedef struct ProfilerFrame
 	void rprofSetPaused(int _paused);
 
 	/* Fetches data of the last saved frame (either threshold exceeded or profiling is paused). */
-	uint32_t rprofGetFrame(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize);
+	void rprofGetFrame(ProfilerFrame* _data);
 
 	/* Saves profiler data to a binary buffer. */
 	/* _data       - profiler data / single frame capture */

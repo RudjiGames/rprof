@@ -18,15 +18,6 @@ namespace rprof {
 
 	class ProfilerContext
 	{
-		enum BufferUse
-		{
-			Capture,
-			Display,
-			Open,
-
-			Count
-		};
-
 		Mutex			m_mutex;
 		rprofFreeList_t	m_scopesAllocator;
 		uint32_t		m_scopesOpen;
@@ -39,9 +30,10 @@ namespace rprof {
 		float			m_timeThreshold;
 		uint32_t		m_levelThreshold;
 		bool			m_pauseProfiling;
-		char			m_namesDataBuffers[BufferUse::Count][RPROF_TEXT_MAX];
-		char*			m_namesData[BufferUse::Count];
-		int				m_namesSize[BufferUse::Count];
+		char			m_namesDataCapture[RPROF_TEXT_MAX];
+		int				m_namesSizeCapture;
+		char			m_namesDataDisplay[RPROF_TEXT_MAX];
+		int				m_namesSizeDisplay;
 		uint32_t		m_tlsLevel;
 
 		std::map<uint64_t, std::string>	m_threadNames;
@@ -61,8 +53,8 @@ namespace rprof {
 		void			decLevel();
 		ProfilerScope*	beginScope(const char* _file, int _line, const char* _name);
 		void			endScope(ProfilerScope* _scope);
-		const char*		addString(const char* _name, BufferUse _buffer);
-		uint32_t		getFrameData(ProfilerFrame* _data, char* _nameBuffer, uint32_t _nameBufferSize);
+		const char*		addString(const char* _name, bool _capture = true);
+		void			getFrameData(ProfilerFrame* _data);
 	};
 
 } // namespace rprof

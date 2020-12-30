@@ -118,10 +118,9 @@ struct rprofApp : public rapp::App
 
 	void drawGUI()
 	{
-		char nameBuffer[512 * 1024];
 		RPROF_SCOPE("Draw GUI");
 		ProfilerFrame data;
-		rprofGetFrame(&data, nameBuffer, 512 * 1024);
+		rprofGetFrame(&data);
 
 		char buffer[10*1024];
 		if (int size = rprofDrawFrame(&data, buffer, 10*1024))
