@@ -122,9 +122,9 @@ namespace rprof {
 			memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
 
 			m_namesSizeDisplay = 0;
-			m_displayScopes = m_scopesOpen;
-			m_frameStartTime = frameBeginTime;
-			m_frameEndTime = frameEndTime;
+			m_displayScopes		= m_scopesOpen;
+			m_frameStartTime	= frameBeginTime;
+			m_frameEndTime		= frameEndTime;
 
 			for (uint32_t i=0; i<m_scopesOpen; ++i)
 				m_scopesDisplay[i].m_name = addString(m_scopesDisplay[i].m_name, false);
