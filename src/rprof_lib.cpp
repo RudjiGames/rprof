@@ -313,7 +313,7 @@ extern "C" {
 		uint32_t numStrings;
 		readVar(buffer, numStrings);
 
-		const char*	strings[RPROF_SCOPES_MAX];
+		const char*	strings[RPROF_TEXT_MAX];
 		for (uint32_t i=0; i<numStrings; ++i)
 			strings[i] = readString(buffer);
 
