@@ -21,6 +21,7 @@
 #define RPROF_PLATFORM_ANDROID		0
 #define RPROF_PLATFORM_XBOXONE		0
 #define RPROF_PLATFORM_EMSCRIPTEN	0
+#define RPROF_PLATFORM_SWITCH		0
 
 /*--------------------------------------------------------------------------
  * Detect platform
@@ -52,6 +53,9 @@
 #elif defined(__EMSCRIPTEN__)
 #undef  RPROF_PLATFORM_EMSCRIPTEN
 #define RPROF_PLATFORM_EMSCRIPTEN	1
+#elif defined(__NINTENDO__)
+#undef  RPROF_PLATFORM_SWITCH
+#define RPROF_PLATFORM_SWITCH		1
 #else
 #error "Platform not supported!"
 #endif
@@ -62,6 +66,7 @@
 								RPROF_PLATFORM_IOS			|| \
 								RPROF_PLATFORM_PS4			|| \
 								RPROF_PLATFORM_EMSCRIPTEN	|| \
+								RPROF_PLATFORM_SWITCH		|| \
 								0) 
 
 /*--------------------------------------------------------------------------
@@ -88,6 +93,9 @@
 	#include <pthread.h>
 	#include <time.h>
 	#include <emscripten.h>
+#elif SPIKE_PLATFORM_SWITCH
+	#include <pthread.h>
+	#include <nn/os/os_Tick.h>
 #elif RPROF_PLATFORM_POSIX
 	#include <pthread.h>
 	#include <sys/time.h>
@@ -110,7 +118,7 @@ static inline uint64_t getThreadID()
 	return (uint64_t)tid;
 #elif RPROF_PLATFORM_PS4
 	return (uint64_t)scePthreadSelf();
-#elif RPROF_PLATFORM_ANDROID || RPROF_PLATFORM_EMSCRIPTEN
+#elif RPROF_PLATFORM_ANDROID || RPROF_PLATFORM_EMSCRIPTEN || SPIKE_PLATFORM_SWITCH
 	return pthread_self();
 #else
 	#error "Unsupported platform!"
@@ -138,6 +146,8 @@ static inline uint8_t getPlatformID()
 	return 8;
 #elif RPROF_PLATFORM_EMSCRIPTEN
 	return 9;
+#elif RPROF_PLATFORM_SWITCH
+	return 10;
 #else
 	return 0xff;
 #endif
@@ -157,6 +167,7 @@ static inline const char* getPlatformName(uint8_t _platformID)
 	case  7: return "Android";
 	case  8: return "XboxOne";
 	case  9: return "WebGL";
+	case 10: return "Nintendo Switch";
 	default: return "Unknown platform";
 	};
 }

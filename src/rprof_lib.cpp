@@ -313,7 +313,7 @@ extern "C" {
 		uint32_t numStrings;
 		readVar(buffer, numStrings);
 
-		const char*	strings[RPROF_TEXT_MAX];
+		const char*	strings[RPROF_SCOPES_MAX];
 		for (uint32_t i=0; i<numStrings; ++i)
 			strings[i] = readString(buffer);
 
@@ -462,6 +462,8 @@ extern "C" {
 		int64_t q = ::clock();
 #elif RPROF_PLATFORM_EMSCRIPTEN
 		int64_t q = (int64_t)(emscripten_get_now() * 1000.0);
+#elif RPROF_PLATFORM_SWITCH
+		int64_t q = nn::os::GetSystemTick().GetInt64Value();
 #else
 		struct timeval now;
 		gettimeofday(&now, 0);
@@ -505,6 +507,8 @@ extern "C" {
 		return CLOCKS_PER_SEC;
 #elif RPROF_PLATFORM_PS4
 		return sceKernelGetTscFrequency();
+#elif RPROF_PLATFORM_SWITCH
+		return nn::os::GetSystemTickFrequency();
 #else
 		return 1000000;
 #endif
