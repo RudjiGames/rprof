@@ -26,7 +26,7 @@ namespace rprof {
 		m_tlsLevel = tlsAllocate();
 		rprofFreeListCreate(sizeof(ProfilerScope), RPROF_SCOPES_MAX, &m_scopesAllocator);
 
-		for (int i = 0; i < BufferUse::Count; ++i)
+		for (int i=0; i<BufferUse::Count; ++i)
 		{
 			m_namesSize[i] = 0;
 			m_namesData[i] = m_namesDataBuffers[i];
@@ -41,8 +41,8 @@ namespace rprof {
 
 	void ProfilerContext::setThreshold(float _ms, int _levelThreshold)
 	{
-		m_timeThreshold = _ms;
-		m_levelThreshold = _levelThreshold;
+		m_timeThreshold		= _ms;
+		m_levelThreshold	= _levelThreshold;
 	}
 
 	bool ProfilerContext::isPaused()
@@ -91,7 +91,7 @@ namespace rprof {
 		m_namesSize[BufferUse::Open] = 0;
 
 		static ProfilerScope scopesDisplay[RPROF_SCOPES_MAX];
-		for (uint32_t i = 0; i < m_scopesOpen; ++i)
+		for (uint32_t i=0; i<m_scopesOpen; ++i)
 		{
 			ProfilerScope* scope = m_scopesCapture[i];
 
@@ -127,10 +127,6 @@ namespace rprof {
 		if ((level == -1) && (m_timeThreshold <= prevFrameTime))
 			m_thresholdCrossed = true;
 
-		m_namesSize[BufferUse::Capture] = 0;
-		for (uint32_t i = 0; i < scopesToRestart; ++i)
-			m_scopesCapture[i]->m_name = addString(m_scopesCapture[i]->m_name, BufferUse::Capture);
-
 		if (m_thresholdCrossed && !m_pauseProfiling)
 		{
 			std::swap(m_namesData[BufferUse::Capture], m_namesData[BufferUse::Display]);
@@ -141,6 +137,10 @@ namespace rprof {
 			m_frameStartTime	= frameBeginTime;
 			m_frameEndTime		= frameEndTime;
 		}
+
+		m_namesSize[BufferUse::Capture] = 0;
+		for (uint32_t i=0; i<scopesToRestart; ++i)
+			m_scopesCapture[i]->m_name = addString(m_scopesCapture[i]->m_name, BufferUse::Capture);
 
 		m_scopesOpen	= scopesToRestart;
 		frameTime		= frameEndTime - frameBeginTime;
@@ -185,10 +185,10 @@ namespace rprof {
 			scope->m_end	= scope->m_start;
 		}
 
-		scope->m_threadID = getThreadID();
-		scope->m_file	= _file;
-		scope->m_line	= _line;
-		scope->m_level	= incLevel();
+		scope->m_threadID	= getThreadID();
+		scope->m_file		= _file;
+		scope->m_line		= _line;
+		scope->m_level		= incLevel();
 
 		return scope;
 	}
@@ -244,8 +244,8 @@ namespace rprof {
 		std::map<uint64_t, std::string>::iterator it = m_threadNames.begin();
 		for (uint32_t i=0; i<numThreads; ++i)
 		{
-			threadData[i].m_threadID = it->first;
-			threadData[i].m_name = it->second.c_str();
+			threadData[i].m_threadID	= it->first;
+			threadData[i].m_name		= it->second.c_str();
 			++it;
 		}
 	}
