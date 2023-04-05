@@ -36,12 +36,12 @@ for:
     - job_name: Windows
 
   init:
-  - ..\build\tools\bin\windows\genie --file=genie\genie.lua %TOOLSET%
+  - ..\build\tools\bin\windows\genie --file=genie\genie.lua vs2019
 
   #build_script:
   #- echo "Build for Windows"
 
-  project: ../.build/windows/$(TOOLSET)/rprof/projects/rprof.sln
+  project: ../.build/windows/vs2019/rprof/projects/rprof.sln
   
   test: off
 
