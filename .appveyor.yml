@@ -1,12 +1,14 @@
-shallow_clone: true
-
-os:
-  - Visual Studio 2017
-
 environment:
   matrix:
-  - TOOLSET: vs2015
-  - TOOLSET: vs2017
+    - job_name: Windows
+#      QTDIR: C:\Qt\5.10.1\msvc2017_64
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
+    - job_name: Linux
+      APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+
+    - job_name: OSX
+      APPVEYOR_BUILD_WORKER_IMAGE: macOS
 
 configuration:
   - Debug
@@ -15,9 +17,66 @@ configuration:
 
 install:
   - git clone --depth 1 https://github.com/milostosic/rbase ..\rbase
-  - git clone --depth 1 https://github.com/milostosic/rapp  ..\rapp
+  - git clone --depth 1 https://github.com/milostosic/rprof  ..\rprof
   - git clone --depth 1 https://github.com/milostosic/build ..\build
+
+matrix:
+  fast_finish: true
+
+shallow_clone: true
+
+for:
+  
+# ======================================
+#      Windows
+# ======================================
+-
+  matrix:
+    only:
+    - job_name: Windows
+
+  init:
   - ..\build\tools\bin\windows\genie --file=genie\genie.lua %TOOLSET%
 
-build:
+  #build_script:
+  #- echo "Build for Windows"
+
   project: ../.build/windows/$(TOOLSET)/rprof/projects/rprof.sln
+  
+  test: off
+
+# ======================================
+#      Linux
+# ======================================
+-
+  matrix:
+    only:
+    - job_name: Linux
+
+  init:
+  - ../build/tools/bin/linux/genie --file=genie/genie.lua -gcc=linux-gcc-9
+
+  #build_script:
+  #- echo "Build for Linux"
+
+  project: ../.build/linux/linux/gcc-9/rprof/projects/rprof.make
+
+  test: off
+
+# ======================================
+#      macOS
+# ======================================
+-
+  matrix:
+    only:
+    - job_name: OSX
+
+  init:
+  - ../build/tools/bin/darwin/genie --file=genie/genie.lua -gcc=osx
+
+#  build_script:
+#  - echo "Build for OSX"
+
+  project: ../.build/osx/clang/rprof/projects/rprof.make
+
+  test: off
