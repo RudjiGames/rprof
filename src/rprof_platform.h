@@ -97,6 +97,9 @@
 	#include <pthread.h>
 	#include <nn/os/os_Tick.h>
 #elif RPROF_PLATFORM_POSIX
+	#if RPROF_PLATFORM_LINUX
+		#include <sys/syscall.h>
+	#endif
 	#include <pthread.h>
 	#include <sys/time.h>
 #else

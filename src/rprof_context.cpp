@@ -8,6 +8,7 @@
 #include "rprof_platform.h"
 #include "rprof_context.h"
 #include "rprof_tls.h"
+#include "string.h" // memcpy
 
 extern "C" uint64_t rprofGetClockFrequency();
 
