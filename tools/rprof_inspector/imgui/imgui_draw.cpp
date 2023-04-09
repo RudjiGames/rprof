@@ -13,6 +13,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#ifdef __EMSCRIPTEN__
+
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
@@ -3075,3 +3077,5 @@ static const char* GetDefaultCompressedFontDataTTFBase85()
 {
     return proggy_clean_ttf_compressed_data_base85;
 }
+
+#endif // #ifdef __EMSCRIPTEN__

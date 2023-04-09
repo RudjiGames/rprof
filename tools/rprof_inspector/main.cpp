@@ -6,7 +6,6 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#endif
 
 #define GLFW_INCLUDE_ES3
 #include <GLES3/gl3.h>
@@ -365,3 +364,10 @@ extern "C" int main(int argc, char** argv)
 	quit();
 	return 0;
 }
+
+#else	//  __EMSCRIPTEN__
+int main()
+{
+	return 0;
+}
+#endif	//  __EMSCRIPTEN__

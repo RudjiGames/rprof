@@ -478,19 +478,19 @@ extern "C" {
 	#if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
 		static uint64_t frequency = 1;
 		static bool initialized = false;
-		if (!initialized)
+		while (!initialized)
 		{
 			LARGE_INTEGER li1, li2;
 			QueryPerformanceCounter(&li1);
 			uint64_t tsc1 = __rdtsc();
-			for (int i=0; i<230000000; ++i);
+			Sleep(230);
 			uint64_t tsc2 = __rdtsc();
 			QueryPerformanceCounter(&li2);
 
 			LARGE_INTEGER lif;
 			QueryPerformanceFrequency(&lif);
 			uint64_t time = ((li2.QuadPart - li1.QuadPart) * 1000) / lif.QuadPart;
-			frequency = (uint64_t)(1000 * ((tsc2-tsc1)/time));
+			frequency = (uint64_t)(1000 * ((tsc2 - tsc1) / time));
 			initialized = true;
 		}
 		return frequency;

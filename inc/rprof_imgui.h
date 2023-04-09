@@ -240,9 +240,9 @@
 
 		if (ImGui::GetIO().KeyCtrl)
 			paz.m_zoom += ImGui::GetIO().MouseWheel / 30.0f;
-		if (ImGui::GetIO().KeysDown[65] && ImGui::IsWindowHovered())	// 'a'
+		if (ImGui::IsKeyPressed(ImGuiKey_A) && ImGui::IsWindowHovered())
 			paz.m_zoom *= 1.1f;
-		if (ImGui::GetIO().KeysDown[90] && ImGui::IsWindowHovered())	// 'z'
+		if (ImGui::IsKeyPressed(ImGuiKey_Z) && ImGui::IsWindowHovered())
 			paz.m_zoom /= 1.1f;
 
 		paz.m_zoom  = rprofMax(paz.m_zoom, 1.0f);

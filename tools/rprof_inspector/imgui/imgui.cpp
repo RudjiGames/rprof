@@ -751,6 +751,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#ifdef __EMSCRIPTEN__
+
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
@@ -13976,3 +13978,4 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #endif
 
 //-----------------------------------------------------------------------------
+#endif // #ifdef __EMSCRIPTEN__

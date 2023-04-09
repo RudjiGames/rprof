@@ -24,6 +24,9 @@
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+
+#ifdef __EMSCRIPTEN__
+
 #define GLFW_INCLUDE_ES3
 
 
@@ -367,3 +370,5 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 
     ImGui_ImplOpenGL3_DestroyFontsTexture();
 }
+
+#endif // #ifdef __EMSCRIPTEN__
