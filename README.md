@@ -1,6 +1,5 @@
-<img src="https://github.com/milostosic/milostosic.github.io/raw/master/logo_libs/rprof.png"/>
+<img src="http://rudji.com/images/lib/rprof.png"/>
 
-[![Build Status](https://travis-ci.org/milostosic/rprof.svg?branch=master)](https://travis-ci.org/milostosic/rprof)
 [![Build status](https://ci.appveyor.com/api/projects/status/4xnlbyty1i4mjrpq?svg=true)](https://ci.appveyor.com/project/milostosic/rprof)
 [![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/milostosic/rprof/blob/master/LICENSE)
 
