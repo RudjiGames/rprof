@@ -57,7 +57,7 @@
 	template <typename T>
 	static inline T rprofMin(T _v1, T _v2) { return _v1 < _v2 ? _v1 : _v2; }
 
-	void flashColor(ImU32& _drawColor, uint64_t _elapsedTime)
+	static inline void flashColor(ImU32& _drawColor, uint64_t _elapsedTime)
 	{
 		ImVec4 white4 = ImColor(IM_COL32_WHITE);
 
@@ -72,7 +72,7 @@
 								255.0f);
 	}
 
-	void flashColorNamed(ImU32& _drawColor, ProfilerScope& _cs, uint64_t _elapsedTime)
+	static inline void flashColorNamed(ImU32& _drawColor, ProfilerScope& _cs, uint64_t _elapsedTime)
 	{
 		if (s_statClickedName && (strcmp(_cs.m_name, s_statClickedName) == 0) && (_cs.m_level == s_statClickedLevel))
 			flashColor(_drawColor, _elapsedTime);
@@ -86,7 +86,7 @@
 		return col;
 	}
 
-	struct SortScopes
+	static struct SortScopes
 	{
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
 		{
@@ -108,7 +108,7 @@
 	/* _buffer     - buffer to store data to */
 	/* _bufferSize - maximum size of buffer, in bytes */
 	/* Returns: if frame was saved, returns number of bytes written - see rprofSave. */
-	int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
+	static int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
 	{
 		int ret = 0;
 
@@ -453,7 +453,7 @@
 	/* Draws a frame capture statistics using ImGui. */
 	/* NB: frame data **MUST** be processed (done in rprofLoad) before using this function. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
-	void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
+	static void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
 	{
 		ImGui::SetNextWindowPos(ImVec2(920.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(600.0f, 900.0f), ImGuiCond_FirstUseEver);
