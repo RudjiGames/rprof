@@ -86,7 +86,7 @@
 		return col;
 	}
 
-	static struct SortScopes
+	struct SortScopes
 	{
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
 		{
@@ -101,17 +101,18 @@
 
 			return false;
 		}
-	} customLess;
+	};
 
 	/* Draws a frame capture inspector dialog using ImGui. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
 	/* _buffer     - buffer to store data to */
 	/* _bufferSize - maximum size of buffer, in bytes */
 	/* Returns: if frame was saved, returns number of bytes written - see rprofSave. */
-	static int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
+	static inline int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
 	{
 		int ret = 0;
 
+		SortScopes customLess;
 		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
 		ImGui::SetNextWindowPos(ImVec2(10.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
@@ -453,7 +454,7 @@
 	/* Draws a frame capture statistics using ImGui. */
 	/* NB: frame data **MUST** be processed (done in rprofLoad) before using this function. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
-	static void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
+	static inline void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
 	{
 		ImGui::SetNextWindowPos(ImVec2(920.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(600.0f, 900.0f), ImGuiCond_FirstUseEver);
