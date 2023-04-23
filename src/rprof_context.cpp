@@ -208,9 +208,15 @@ namespace rprof {
 		char*	nameData = m_namesData[_buffer];
 		int&	nameSize = m_namesSize[_buffer];
 
-		char c, *ret = &nameData[nameSize];
-		while ((c = *_name++) && (nameSize < RPROF_TEXT_MAX))
-			nameData[nameSize++] = c;
+		char *ret = &nameData[nameSize];
+		while (nameSize < RPROF_TEXT_MAX)
+		{
+			char c = *_name++;
+			if (c)
+				nameData[nameSize++] = c;
+			else
+				break;
+		}
 
 		if (nameSize < RPROF_TEXT_MAX)
 			nameData[nameSize++] = 0;
