@@ -86,7 +86,7 @@
 		return col;
 	}
 
-	static struct SortScopes
+	struct SortScopes
 	{
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
 		{
@@ -101,7 +101,7 @@
 
 			return false;
 		}
-	} customLess;
+	};
 
 	/* Draws a frame capture inspector dialog using ImGui. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
@@ -112,6 +112,7 @@
 	{
 		int ret = 0;
 
+		SortScopes customLess;
 		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
 		ImGui::SetNextWindowPos(ImVec2(10.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
