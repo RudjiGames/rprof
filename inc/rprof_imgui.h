@@ -108,7 +108,7 @@
 	/* _buffer     - buffer to store data to */
 	/* _bufferSize - maximum size of buffer, in bytes */
 	/* Returns: if frame was saved, returns number of bytes written - see rprofSave. */
-	static int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
+	static inline int rprofDrawFrame(ProfilerFrame* _data, void* _buffer = 0, size_t _bufferSize = 0, bool _inGame = true, bool _multi = false)
 	{
 		int ret = 0;
 
@@ -453,7 +453,7 @@
 	/* Draws a frame capture statistics using ImGui. */
 	/* NB: frame data **MUST** be processed (done in rprofLoad) before using this function. */
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
-	static void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
+	static inline void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
 	{
 		ImGui::SetNextWindowPos(ImVec2(920.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(600.0f, 900.0f), ImGuiCond_FirstUseEver);
