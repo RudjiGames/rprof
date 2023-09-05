@@ -1,7 +1,6 @@
 <img src="https://rudji.com/images/lib/rprof.png"/>
 
-[![Build status](https://ci.appveyor.com/api/projects/status/4xnlbyty1i4mjrpq?svg=true)](https://ci.appveyor.com/project/milostosic/rprof)
-[![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/milostosic/rprof/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/RudjiGames/rprof/blob/master/LICENSE)
 
 About
 ======
@@ -10,22 +9,22 @@ About
 
 Profiler always runs when used, but will display only those frames that exceed given threshold. Default value of 0 means to display every frame. Level value refers to hierachical scope depth where value of 0 represents an entire frame.
 
-![In game screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_vis.jpg) 
+![In game screenshot](https://github.com/RudjiGames/rprof/blob/master/img/rprof_vis.jpg) 
 
 Source Code
 ======
 
 You can get the latest source code by cloning it from github:
 
-      git clone https://github.com/milostosic/rprof.git 
+      git clone https://github.com/RudjiGames/rprof.git 
 
 Dependencies
 ======
 
-There are no dependencies besides the [build](https://github.com/milostosic/build) system scripts, which are optional.  
-It is recommended to use the [build](https://github.com/milostosic/build) system scripts to easily generate projects for numerous platforms:
+There are no dependencies besides the [build](https://github.com/RudjiGames/build) system scripts, which are optional.  
+It is recommended to use the [build](https://github.com/RudjiGames/build) system scripts to easily generate projects for numerous platforms:
 
-	git clone https://github.com/milostosic/build.git
+	git clone https://github.com/RudjiGames/build.git
 
 Build
 ======
@@ -33,10 +32,10 @@ Build
 GENie script can generate Microsoft Visual Studio solution or makefiles for a GCC based compiler or cross compiler. Generating a MSVC
 solution, for example, is done using the following command:
 
-      genie vs2017
+      genie vs2022
 
 The generated solution will be located in the following folder:
-   .build/projects/vs2017
+   .build/projects/vs2022
 
 Generating makefiles for a GCC based toolchain is done in a similar way, for
 example:
@@ -74,18 +73,19 @@ Author
 ======
 
 The author of **rprof** is Milos Tosic  
-[ <img src="https://github.com/milostosic/build/raw/gh-pages/images/twitter.png">](https://twitter.com/milostosic)[ <img src="https://github.com/milostosic/build/raw/gh-pages/images/mail.png">](mailto:milostosic77@gmail.com)  
+[ <img src="https://github.com/RudjiGames/.github/blob/main/images/twitter.png">](https://twitter.com/milostosic)[ <img src="https://github.com/RudjiGames/.github/blob/main/images/mail.png">](mailto:milostosic77@gmail.com) 
+
 
 License (BSD 2-clause)
 ======
 
 <a href="http://opensource.org/licenses/BSD-2-Clause" target="_blank">
-<img align="right" src="http://opensource.org/trademarks/opensource/OSI-Approved-License-100x137.png">
+<img align="right" src="https://opensource.org/wp-content/uploads/2022/10/osi-badge-dark.svg" width="100" height="137">
 </a>
 
-	Copyright (c) 2020 Milos Tosic. All rights reserved.
+	Copyright (c) 2023 Milos Tosic. All rights reserved.
 	
-	https://github.com/milostosic/rprof
+	https://github.com/RudjiGames/rprof
 	
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
