@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2022 by Milos Tosic. All Rights Reserved.
+ * License: http://www.opensource.org/licenses/BSD-2-Clause
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

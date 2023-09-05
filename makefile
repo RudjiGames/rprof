@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Milos Toisc. All rights reserved.
+# Copyright (c) 2030 by Milos Toisc. All rights reserved.
 # License: http://www.opensource.org/licenses/BSD-2-Clause
 #
 

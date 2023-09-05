@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 by Milos Tosic. All Rights Reserved.
+ * Copyright (c) 2023 by Milos Tosic. All Rights Reserved.
  * License: http://www.opensource.org/licenses/BSD-2-Clause
  */
 
@@ -58,4 +58,10 @@ void rprofFreeListFree(struct rprofFreeList_t* _freeList, void* _ptr)
 		_freeList->m_next	= (uint8_t*)_ptr;
 	}
 	++_freeList->m_blocksFree;
-}int rprofFreeListCheckPtr(struct rprofFreeList_t* _freeList, void* _ptr){	return	((uintptr_t)_freeList->m_maxBlocks * (uintptr_t)_freeList->m_blockSize) > 			(uintptr_t)(((uint8_t*)_ptr) - _freeList->m_buffer) ? 1 : 0;}
+}
+
+int rprofFreeListCheckPtr(struct rprofFreeList_t* _freeList, void* _ptr)
+{
+	return	((uintptr_t)_freeList->m_maxBlocks * (uintptr_t)_freeList->m_blockSize) > 
+			(uintptr_t)(((uint8_t*)_ptr) - _freeList->m_buffer) ? 1 : 0;
+}
