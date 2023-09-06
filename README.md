@@ -69,12 +69,6 @@ Viewer is browser based in order to be able to use it as a part of QA pipeline d
 
 ![Inspector screenshot](https://github.com/milostosic/rprof/blob/master/img/rprof_browser.gif) 
 
-Author
-======
-
-The author of **rprof** is Milos Tosic  
-[ <img src="https://github.com/RudjiGames/.github/blob/main/images/twitter.png">](https://twitter.com/milostosic)[ <img src="https://github.com/RudjiGames/.github/blob/main/images/mail.png">](mailto:milostosic77@gmail.com) 
-
 
 License (BSD 2-clause)
 ======
