@@ -18,18 +18,10 @@ You can get the latest source code by cloning it from github:
 
       git clone https://github.com/RudjiGames/rprof.git 
 
-Dependencies
-======
-
-There are no dependencies besides the [build](https://github.com/RudjiGames/build) system scripts, which are optional.  
-It is recommended to use the [build](https://github.com/RudjiGames/build) system scripts to easily generate projects for numerous platforms:
-
-	git clone https://github.com/RudjiGames/build.git
-
 Build
 ======
 
-GENie script can generate Microsoft Visual Studio solution or makefiles for a GCC based compiler or cross compiler. Generating a MSVC
+[GENie](https://github.com/bkaradzic/GENie) script can generate Microsoft Visual Studio solution or makefiles for a GCC based compiler or cross compiler. Generating a MSVC
 solution, for example, is done using the following command:
 
       genie vs2022
@@ -56,6 +48,8 @@ To build a GCC based library use the following command lines:
       Debug, 32bit   :  make -R config=debug32
       Release, 64bit :  make -R config=release64
 
+For convenience, there are batch files in 'scripts' directory that can be used to fetch dependencies (for the demo) and generate project files.
+
 Browser inspector
 ======
 
@@ -77,7 +71,7 @@ License (BSD 2-clause)
 <img align="right" src="https://opensource.org/wp-content/uploads/2022/10/osi-badge-dark.svg" width="100" height="137">
 </a>
 
-	Copyright (c) 2023 by Milos Tosic. All rights reserved.
+	Copyright 2023 Milos Tosic. All rights reserved.
 	
 	https://github.com/RudjiGames/rprof
 	
