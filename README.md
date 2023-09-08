@@ -48,6 +48,8 @@ To build a GCC based library use the following command lines:
       Debug, 32bit   :  make -R config=debug32
       Release, 64bit :  make -R config=release64
 
+For convenience, there are batch files in 'scripts' directory that can be used to fetch dependencies (for the demo) and generate project files.
+
 Browser inspector
 ======
 
@@ -69,7 +71,7 @@ License (BSD 2-clause)
 <img align="right" src="https://opensource.org/wp-content/uploads/2022/10/osi-badge-dark.svg" width="100" height="137">
 </a>
 
-	Copyright (c) 2023 by Milos Tosic. All rights reserved.
+	Copyright 2023 Milos Tosic. All rights reserved.
 	
 	https://github.com/RudjiGames/rprof
 	
