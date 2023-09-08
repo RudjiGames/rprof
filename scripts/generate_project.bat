@@ -1,4 +1,4 @@
 @echo off
-cd ../genie
-genie vs2022
-cd ../scripts
+cd ..\genie
+..\..\build\tools\bin\windows\genie.exe vs2022
+cd ..\scripts
