@@ -81,8 +81,6 @@ namespace rprof {
 		frameEndTime		= rprofGetClock();
 		beginPrevFrameTime	= frameEndTime;
 
-		static uint64_t frameTime = frameEndTime - frameBeginTime;
-
 		m_thresholdCrossed = false;
 
 		int level = (int)m_levelThreshold - 1;
@@ -144,7 +142,6 @@ namespace rprof {
 			m_scopesCapture[i]->m_name = addString(m_scopesCapture[i]->m_name, BufferUse::Capture);
 
 		m_scopesOpen	= scopesToRestart;
-		frameTime		= frameEndTime - frameBeginTime;
 	}
 
 	int ProfilerContext::incLevel()

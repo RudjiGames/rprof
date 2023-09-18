@@ -393,7 +393,6 @@ extern "C" {
 	{
 		size_t		bufferSize = _bufferSize;
 		uint8_t*	buffer = 0;
-		uint8_t*	bufferPtr;
 
 		int decomp = -1;
 		do
@@ -404,8 +403,6 @@ extern "C" {
 			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
 
 		} while (decomp < 0);
-
-		bufferPtr = buffer;
 
 		uint64_t startTime;
 		uint64_t endtime;

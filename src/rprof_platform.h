@@ -93,7 +93,7 @@
 	#include <pthread.h>
 	#include <time.h>
 	#include <emscripten.h>
-#elif SPIKE_PLATFORM_SWITCH
+#elif RPROF_PLATFORM_SWITCH
 	#include <pthread.h>
 	#include <nn/os/os_Tick.h>
 #elif RPROF_PLATFORM_POSIX
