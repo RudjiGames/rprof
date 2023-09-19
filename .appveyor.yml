@@ -55,14 +55,13 @@ for:
       - job_name: Windows
   
     init:
+      - git clone --recursive --depth 1 https://github.com/RudjiGames/rapp    rapp
       - git clone --depth 1 https://github.com/RudjiGames/rprof   rprof
-      - git clone --depth 1 https://github.com/RudjiGames/rapp    rapp
       - git clone --depth 1 https://github.com/RudjiGames/build   build
       - git clone --depth 1 https://github.com/RudjiGames/rbase   rbase
       - git clone --depth 1 https://github.com/bkaradzic/bx.git   bx
       - git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
       - git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
-      - git clone --depth 1 https://github.com/dougbinks/enkiTS   enkiTS
      
     install:
       - build\tools\bin\windows\genie.exe --file=rprof\genie\genie.lua vs2019
@@ -80,15 +79,14 @@ for:
 
     init:
       - sudo apt update -y && sudo apt install -y xorg libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libegl1-mesa-dev
+      - git clone --recursive --depth 1 https://github.com/RudjiGames/rapp  rapp
       - git clone --depth 1 https://github.com/RudjiGames/rprof rprof
-      - git clone --depth 1 https://github.com/RudjiGames/rapp  rapp
       - git clone --depth 1 https://github.com/RudjiGames/build build
       - git clone --depth 1 https://github.com/RudjiGames/rbase rbase
       - git clone --depth 1 https://github.com/bkaradzic/bx     bx
       - git clone --depth 1 https://github.com/bkaradzic/bimg   bimg
       - git clone --depth 1 https://github.com/bkaradzic/bgfx   bgfx
       - git clone --depth 1 https://github.com/glfw/glfw        glfw
-      - git clone --depth 1 https://github.com/dougbinks/enkiTS enkiTS
       - git clone --depth 1 https://github.com/bkaradzic/GENie  GENie		# build GENie from source: `GLIBC_2.29' not found
       - cd GENie && make && cd ..
       - mkdir glfwbuild && cd glfwbuild && cmake ../glfw -DGLFW_BUILD_TESTS=OFF && make -j4 && sudo make install && cd ..
@@ -110,14 +108,13 @@ for:
       - job_name: OSX
 
     init:
+      - git clone --recursive --depth 1 https://github.com/RudjiGames/rapp    rapp
       - git clone --depth 1 https://github.com/RudjiGames/rprof   rprof
-      - git clone --depth 1 https://github.com/RudjiGames/rapp    rapp
       - git clone --depth 1 https://github.com/RudjiGames/build   build
       - git clone --depth 1 https://github.com/RudjiGames/rbase   rbase
       - git clone --depth 1 https://github.com/bkaradzic/bx.git   bx
       - git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
       - git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
-      - git clone --depth 1 https://github.com/dougbinks/enkiTS   enkiTS
     
     install:
       - ./build/tools/bin/darwin/genie --file=rprof/genie/genie.lua --gcc=osx gmake
