@@ -6,7 +6,7 @@
 About
 ======
 
-**rprof** is a scope based CPU profiling library with [ImGui](https://github.com/ocornut/imgui) visulization and browser profile inspector. The core concept is a time threshold, which can be used to easily catch functions or entire frames that exceed certain time value. By doing this, optimization can focus initially on frames and functions that are only occasionally slow and iteratively progress towards more consistent performance.
+**rprof** is a scope based CPU profiling library with [ImGui](https://github.com/ocornut/imgui) visulization and browser profile inspector. The core concept is a time threshold, which can be used to easily catch functions or entire frames that exceed certain time value. By doing this, optimization work can focus initially on frames and functions that are only occasionally slow and iteratively progress towards more consistent performance.
 
 Profiler always runs when used, but will display only those frames that exceed given threshold. Default value of 0 means to display every frame. Level value refers to hierachical scope depth where value of 0 represents an entire frame.
 
