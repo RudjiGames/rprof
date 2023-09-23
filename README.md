@@ -1,4 +1,4 @@
-<img src="https://rudji.com/images/lib/rprof.png"/>
+<img src="https://www.rudji.com/images/lib/rprof.png"/>
 
 [![Build status](https://ci.appveyor.com/api/projects/status/0498ey79muxvrh9t?svg=true)](https://ci.appveyor.com/project/milostosic/rprof-fbbqv)
 [![License](https://img.shields.io/badge/license-BSD--2%20clause-blue.svg)](https://github.com/RudjiGames/rprof/blob/master/LICENSE)
