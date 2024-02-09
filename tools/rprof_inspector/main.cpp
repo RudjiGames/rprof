@@ -173,7 +173,7 @@ int init()
 																   // Open a window and create its OpenGL context
 	int canvasWidth = 800;
 	int canvasHeight = 600;
-	g_window = glfwCreateWindow( canvasWidth, canvasHeight, "Spike profiler", NULL, NULL);
+	g_window = glfwCreateWindow( canvasWidth, canvasHeight, "rprof CPU profiler", NULL, NULL);
 	if( g_window == NULL )
 	{
 		fprintf( stderr, "Failed to open GLFW window.\n" );
@@ -337,7 +337,7 @@ void loop()
 	glfwMakeContextCurrent(g_window);
 	glfwGetFramebufferSize(g_window, &display_w, &display_h);
 	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.258f, 0.235f, 0.325f, 1.0f);
+	glClearColor(0.21568f, 0.21568f, 0.34902f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
