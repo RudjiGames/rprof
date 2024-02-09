@@ -339,6 +339,10 @@ void loop()
 	glViewport(0, 0, display_w, display_h);
 	glClearColor(0.21568f, 0.21568f, 0.34902f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
+	//glClearColor(0.f, 0.f, 0.f, 0.0f);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendEquation(GL_FUNC_ADD);
+	//glEnable(GL_BLEND);
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	glfwMakeContextCurrent(g_window);
