@@ -91,7 +91,7 @@ struct rprofApp : public rapp::App
 		busyCPU();
 	}
 
-	void draw()
+	void draw(float /*_alpha*/)
 	{
 		RPROF_BEGIN_FRAME();
 		appRunOnMainThread(mainThreadFunc, this);
