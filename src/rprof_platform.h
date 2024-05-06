@@ -122,7 +122,7 @@ static inline uint64_t getThreadID()
 	return (uint64_t)tid;
 #elif RPROF_PLATFORM_PS4
 	return (uint64_t)scePthreadSelf();
-#elif RPROF_PLATFORM_ANDROID || RPROF_PLATFORM_EMSCRIPTEN || SPIKE_PLATFORM_SWITCH
+#elif RPROF_PLATFORM_ANDROID || RPROF_PLATFORM_EMSCRIPTEN || RPROF_PLATFORM_SWITCH
 	return pthread_self();
 #else
 	#error "Unsupported platform!"
