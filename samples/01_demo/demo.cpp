@@ -48,11 +48,6 @@ struct rprofApp : public rapp::App
 	rapp::WindowHandle	m_window;
 	float				m_time;
 
-	virtual ~rprofApp()
-	{
-		RPROF_SHUTDOWN();
-	}
-
 	int init(int32_t /*_argc*/, const char* const* /*_argv*/, rtmLibInterface* /*_libInterface = 0*/)
 	{
 		m_time = 0.0f;
@@ -154,6 +149,7 @@ struct rprofApp : public rapp::App
 		rtm::Console::rgb(255, 255, 0, "Shutting down app\n");
 		rapp::appGraphicsShutdown(this, m_window);
 		rapp::inputRemoveBindings("bindings");
+		RPROF_SHUTDOWN();
 	}
 
 	static void mainThreadFunc(void* /*_appClass*/)
