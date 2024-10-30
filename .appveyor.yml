@@ -115,9 +115,11 @@ for:
       - git clone --depth 1 https://github.com/bkaradzic/bx.git   bx
       - git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
       - git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
-    
+      - git clone --depth 1 https://github.com/bkaradzic/GENie GENie  # build GENie from source: we don't know the target CPU, can't use ARM binary from 'build'
+      - cd GENie && make && cd ..
+      
     install:
-      - ./build/tools/bin/darwin/genie --file=rprof/genie/genie.lua --gcc=osx gmake
+      - ./GENie/bin/darwin/genie --file=rprof/genie/genie.lua --gcc=osx-x64 gmake
     
     build_script:
       - cd ./.build/osx/clang/rprof/projects/
