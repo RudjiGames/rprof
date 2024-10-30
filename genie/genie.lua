@@ -10,7 +10,6 @@ while string.len(currPath) > 2 do
 end
 
 solution "rprof"
-	configurations { "debug", "release", "retail" }
 	setPlatforms()
 
 	addLibProjects("rprof")
