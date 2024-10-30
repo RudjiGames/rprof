@@ -95,7 +95,7 @@ for:
       - ./GENie/bin/linux/genie --file=rprof/genie/genie.lua --gcc=linux-gcc gmake
   
     build_script:
-      - cd ./.build/linux/gcc/rprof/projects/
+      - cd ./.build/linux/linux-gcc/rprof/projects/
       - make config=${buildcfg}
 
 # ======================================
