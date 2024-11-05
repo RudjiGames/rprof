@@ -78,7 +78,7 @@ for:
       - job_name: Linux
 
     init:
-      - sudo apt update -y && sudo apt install -y xorg libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libegl1-mesa-dev
+      - sudo apt-get update --allow-releaseinfo-change && sudo apt install -y xorg libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libegl1-mesa-dev
       - git clone --recursive --depth 1 https://github.com/RudjiGames/rapp  rapp
       - git clone --depth 1 https://github.com/RudjiGames/rprof rprof
       - git clone --depth 1 https://github.com/RudjiGames/build build
