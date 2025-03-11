@@ -18,6 +18,7 @@
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
+#include "implot.h"
 #include "../../3rd/lz4-r191/lz4.h"
 
 #include "../../inc/rprof.h"
@@ -41,6 +42,7 @@ struct FrameInfo
 
 GLFWwindow*				g_window;
 ImGuiContext*			g_imgui = 0;
+ImPlotContext*			g_plot = 0;
 int						g_multi = -1;
 ProfilerFrame			g_frame;
 char					g_fileName[1024];
@@ -77,8 +79,8 @@ void profilerFrameLoad(const char* _name, uint32_t _offset = 0, uint32_t _size =
 
 void rprofDrawTutorial(bool _multi)
 {
-	ImGui::SetNextWindowPos(ImVec2(10.0f, _multi ? 650.0f : 500.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(900.0f, 410.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(6.0f, _multi ? 630.0f : 500.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(900.0f, 330.0f), ImGuiCond_FirstUseEver);
 
 	ImGui::Begin("Usage instructions");
 	ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "Hovering scopes");
@@ -105,9 +107,29 @@ void rprofDrawTutorial(bool _multi)
 	ImGui::End();
 }
 
+void Demo_LinePlots() {
+	static float xs1[1001], ys1[1001];
+	for (int i = 0; i < 1001; ++i) {
+		xs1[i] = i * 0.001f;
+		ys1[i] = 0.5f + 0.5f * sinf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
+	}
+	static double xs2[20], ys2[20];
+	for (int i = 0; i < 20; ++i) {
+		xs2[i] = i * 1 / 19.0f;
+		ys2[i] = xs2[i] * xs2[i];
+	}
+	if (ImPlot::BeginPlot("Line Plots")) {
+		ImPlot::SetupAxes("x", "y");
+		ImPlot::PlotLine("f(x)", xs1, ys1, 1001);
+		ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+		ImPlot::PlotLine("g(x)", xs2, ys2, 20, ImPlotLineFlags_Segments);
+		ImPlot::EndPlot();
+	}
+}
+
 void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 {
-	ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(6.0f, 6.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(1510.0f, 140.0f), ImGuiCond_FirstUseEver);
 
 	ImGui::Begin("Frame navigator", 0, ImGuiWindowFlags_NoScrollbar);
@@ -115,7 +137,7 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 	static int sortKind = 0;
 	ImGui::Text("Sort frames by:  ");
 	ImGui::SameLine();
-	ImGui::RadioButton("Chronological", &sortKind, 0);
+	ImGui::RadioButton("Number", &sortKind, 0);
 	ImGui::SameLine();
 	ImGui::RadioButton("Descending", &sortKind, 1);
 	ImGui::SameLine();
@@ -149,8 +171,8 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 
 	ImGui::BeginChild("##Child", ImVec2(s.x, 70), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-	int idx = 1;
-		ImGui::PlotHistogram("##Hist", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
+	int idx = 0;	// TODO: Fetch hovered/clicked index from histogram
+	ImGui::PlotHistogram("##Hist", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
 
 	if (ImGui::IsMouseClicked(0) && (idx != -1))
 	{
@@ -188,17 +210,16 @@ int init()
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImGui_ImplGlfw_InitForOpenGL(g_window, true);
+	ImGui_ImplGlfw_InstallEmscriptenCallbacks(g_window, "#canvas");
 	ImGui_ImplOpenGL3_Init();
 
 	ImGui::StyleColorsDark();
 
-	io.Fonts->AddFontFromFileTTF("data/MavenPro-Regular.ttf", 18.0f);
-	io.Fonts->AddFontFromFileTTF("data/MavenPro-Regular.ttf", 15.0f);
-	io.Fonts->AddFontFromFileTTF("data/MavenPro-Regular.ttf", 23.0f);
-	io.Fonts->AddFontFromFileTTF("data/MavenPro-Regular.ttf", 29.0f);
 	io.Fonts->AddFontDefault();
 
 	g_imgui = ImGui::GetCurrentContext();
+
+	g_plot = ImPlot::CreateContext();
 
 	glfwSetMouseButtonCallback(g_window, ImGui_ImplGlfw_MouseButtonCallback);
 	glfwSetScrollCallback(g_window, ImGui_ImplGlfw_ScrollCallback);
@@ -340,10 +361,6 @@ void loop()
 	glViewport(0, 0, display_w, display_h);
 	glClearColor(0.21568f, 0.21568f, 0.34902f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	//glClearColor(0.f, 0.f, 0.f, 0.0f);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glBlendEquation(GL_FUNC_ADD);
-	//glEnable(GL_BLEND);
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	glfwMakeContextCurrent(g_window);

@@ -115,7 +115,7 @@
 		SortScopes customLess;
 		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
-		ImGui::SetNextWindowPos(ImVec2(10.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(6.0f, _multi ? 150.0f : 6.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(900.0f, 480.0f), ImGuiCond_FirstUseEver);
 
 		static bool pause = false;
@@ -335,7 +335,7 @@
 
 		uint64_t totalTime = _data->m_endtime - _data->m_startTime;
 
-		float barHeight = 21.0f;
+		float barHeight = 15.0f;
 		float bottom	= 0.0f;
 
 		uint64_t currTime = rprofGetClock();
@@ -456,8 +456,8 @@
 	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease */
 	static inline void rprofDrawStats(ProfilerFrame* _data, bool _multi = false)
 	{
-		ImGui::SetNextWindowPos(ImVec2(920.0f, _multi ? 160.0f : 10.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(600.0f, 900.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(912.0f, _multi ? 150.0f : 6.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(600.0f, 812.0f), ImGuiCond_FirstUseEver);
 
 		ImGui::Begin("Frame stats");
 
@@ -488,7 +488,7 @@
 
 		float frameStartX	= p.x + 3.0f;
 		float frameEndX		= frameStartX + s.x - 23;
-		float frameStartY	= p.y + 21.0f;
+		float frameStartY	= p.y + 6.0f;
 
 		uint64_t totalTime = 0;
 		if (exclusive == 0)
@@ -496,7 +496,7 @@
 		else
 			totalTime = _data->m_scopesStats[0].m_stats->m_inclusiveTimeTotal;
 
-		float barHeight = 21.0f;
+		float barHeight = 15.0f;
 
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -530,21 +530,21 @@
 
 			flashColorNamed(drawColor, cs, rprofGetClock() - s_timeSinceStatClicked);
 
-			char buffer[1024];
-			snprintf(buffer, 1024, "[%d] %s", cs.m_stats->m_occurences, cs.m_name);
 			draw_list->PushClipRect(tl, br, true);
 			draw_list->AddRectFilled(tl, br, drawColor);
-			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), buffer);
-			draw_list->AddText(ImVec2(startX + 1, frameStartY + 1), IM_COL32(255, 255, 255, 255), buffer);
+			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
+			draw_list->PopClipRect();
+
+			ImVec2 htl = ImVec2(endX, frameStartY);
+			draw_list->PushClipRect(htl, brE, true);
+			draw_list->AddText(tl, IM_COL32(128, 128, 128, 255), cs.m_name);
 			draw_list->PopClipRect();
 
 			if (hoverRow && ImGui::IsWindowHovered())
 			{
-				ImVec2 htl = ImVec2(endX, frameStartY);
 				draw_list->PushClipRect(htl, brE, true);
 				draw_list->AddRectFilled(htl, brE, IM_COL32(64,64,64,255));
-				draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), buffer);
-				draw_list->AddText(ImVec2(startX + 1, frameStartY + 1), IM_COL32(192, 192, 192, 255), buffer);
+				draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
 				draw_list->PopClipRect();
 
 				ImGui::BeginTooltip();

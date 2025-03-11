@@ -9,11 +9,13 @@ SOURCES += ../../3rd/imgui/imgui_tables.cpp
 SOURCES += ../../3rd/imgui/imgui_widgets.cpp 
 SOURCES += ../../3rd/imgui/backends/imgui_impl_glfw.cpp
 SOURCES += ../../3rd/imgui/backends/imgui_impl_opengl3.cpp
+SOURCES += ../../3rd/implot/implot.cpp
+SOURCES += ../../3rd/implot/implot_items.cpp
 SOURCES += ../../src/rprof_context.cpp 
 SOURCES += ../../src/rprof_freelist.cpp 
 SOURCES += ../../src/rprof_lib.cpp 
 
-INCLUDES = -I../../3rd/imgui
+INCLUDES = -I../../3rd/imgui -I../../3rd/implot
 #LIBS = -lGL
 LIBS = -lGL-webgl2-full_es3-getprocaddr
 WEBGL_VER = -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1
