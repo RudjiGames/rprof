@@ -13,11 +13,11 @@
 #include <emscripten.h>
 
 #define GLFW_INCLUDE_ES3
-#include <GLES3/gl3.h>
 #include <GLFW/glfw3.h>
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include <GLES3/gl3.h>
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 #include "../../3rd/lz4-r191/lz4.h"
 
 #include "../../inc/rprof.h"
@@ -40,7 +40,7 @@ struct FrameInfo
 };
 
 GLFWwindow*				g_window;
-ImGuiContext*			imgui = 0;
+ImGuiContext*			g_imgui = 0;
 int						g_multi = -1;
 ProfilerFrame			g_frame;
 char					g_fileName[1024];
@@ -147,9 +147,10 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 	const ImVec2 s = ImGui::GetWindowSize();
 	const ImVec2 p = ImGui::GetWindowPos();
 
-	ImGui::BeginChild("", ImVec2(s.x, 70), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+	ImGui::BeginChild("##Child", ImVec2(s.x, 70), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-	int idx = ImGui::PlotHistogram("", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
+	int idx = 1;
+		ImGui::PlotHistogram("##Hist", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
 
 	if (ImGui::IsMouseClicked(0) && (idx != -1))
 	{
@@ -197,7 +198,7 @@ int init()
 	io.Fonts->AddFontFromFileTTF("data/MavenPro-Regular.ttf", 29.0f);
 	io.Fonts->AddFontDefault();
 
-	imgui = ImGui::GetCurrentContext();
+	g_imgui = ImGui::GetCurrentContext();
 
 	glfwSetMouseButtonCallback(g_window, ImGui_ImplGlfw_MouseButtonCallback);
 	glfwSetScrollCallback(g_window, ImGui_ImplGlfw_ScrollCallback);
@@ -271,7 +272,7 @@ void profilerFrameLoadMulti(const char* _name)
 			rprofLoadTimeOnly(&info.m_time, &fileBuffer[offset], frameSize);
 
 			info.m_size = frameSize;
-			g_frameInfos.push_back(info);
+			g_frameInfos.push_back(info);															
 
 			rprofRelease(&g_frame);
 			offset += frameSize;
@@ -313,7 +314,7 @@ void loop()
 
 	glfwSetWindowSize(g_window, width, height);
 
-	ImGui::SetCurrentContext(imgui);
+	ImGui::SetCurrentContext(g_imgui);
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
