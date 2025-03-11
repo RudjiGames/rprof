@@ -215,7 +215,13 @@ int init()
 
 	ImGui::StyleColorsDark();
 
-	io.Fonts->AddFontDefault();
+	ImFontConfig fontCfg;
+	fontCfg.FontDataOwnedByAtlas = false;
+	fontCfg.OversampleH = 3;
+	fontCfg.OversampleV = 1;
+	fontCfg.RasterizerMultiply = 1.2;
+	fontCfg.PixelSnapH = true;
+	io.Fonts->AddFontDefault(&fontCfg);
 
 	g_imgui = ImGui::GetCurrentContext();
 
