@@ -19,7 +19,7 @@ INCLUDES = -I../../3rd/imgui -I../../3rd/implot
 #LIBS = -lGL
 LIBS = -lGL-webgl2-full_es3-getprocaddr
 WEBGL_VER = -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1
-FILE_SYSTEM = -s FORCE_FILESYSTEM=1 -s ASYNCIFY=1 --memory-init-file 0 -DIMGUI_DISABLE_DEBUG_TOOLS
+FILE_SYSTEM = -s FORCE_FILESYSTEM=1 -s ASYNCIFY=1 --memory-init-file 0 -DIMGUI_DISABLE_DEBUG_TOOLS 
 USE_WASM = -s WASM=1
 
 PROJECTS :=  gui

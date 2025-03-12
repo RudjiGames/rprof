@@ -335,7 +335,7 @@
 
 		uint64_t totalTime = _data->m_endtime - _data->m_startTime;
 
-		float barHeight = 15.0f;
+		float barHeight = 18.0f;
 		float bottom	= 0.0f;
 
 		uint64_t currTime = rprofGetClock();
@@ -511,8 +511,9 @@
 			float startX = frameStartX;
 			float endX = frameStartX + endXpct * (frameEndX - frameStartX);
 
-			ImVec2 tl = ImVec2(startX, frameStartY);
-			ImVec2 br = ImVec2(endX, frameStartY + barHeight);
+			ImVec2 tl  = ImVec2(startX, frameStartY);
+			ImVec2 tlt = ImVec2(tl.x + 3, tl.y);
+			ImVec2 br  = ImVec2(endX, frameStartY + barHeight);
 
 			int colIdx = s_maxLevelColors - 1 - i;
 			if (colIdx < 0) colIdx = 0;
@@ -532,19 +533,19 @@
 
 			draw_list->PushClipRect(tl, br, true);
 			draw_list->AddRectFilled(tl, br, drawColor);
-			draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
+			draw_list->AddText(tlt, IM_COL32(0, 0, 0, 255), cs.m_name);
 			draw_list->PopClipRect();
 
 			ImVec2 htl = ImVec2(endX, frameStartY);
 			draw_list->PushClipRect(htl, brE, true);
-			draw_list->AddText(tl, IM_COL32(128, 128, 128, 255), cs.m_name);
+			draw_list->AddText(tlt, IM_COL32(128, 128, 128, 255), cs.m_name);
 			draw_list->PopClipRect();
 
 			if (hoverRow && ImGui::IsWindowHovered())
 			{
 				draw_list->PushClipRect(htl, brE, true);
 				draw_list->AddRectFilled(htl, brE, IM_COL32(64,64,64,255));
-				draw_list->AddText(tl, IM_COL32(0, 0, 0, 255), cs.m_name);
+				draw_list->AddText(tlt, IM_COL32(0, 0, 0, 255), cs.m_name);
 				draw_list->PopClipRect();
 
 				ImGui::BeginTooltip();

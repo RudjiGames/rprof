@@ -16,6 +16,7 @@
 #include <GLFW/glfw3.h>
 #include <GLES3/gl3.h>
 #include "imgui.h"
+#include "misc/freetype/imgui_freetype.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "implot.h"
@@ -215,17 +216,10 @@ int init()
 
 	ImGui::StyleColorsDark();
 
-	ImFontConfig fontCfg;
-	fontCfg.FontDataOwnedByAtlas = false;
-	fontCfg.OversampleH = 3;
-	fontCfg.OversampleV = 1;
-	fontCfg.RasterizerMultiply = 1.2;
-	fontCfg.PixelSnapH = true;
-	io.Fonts->AddFontDefault(&fontCfg);
+	io.Fonts->AddFontDefault();
 
 	g_imgui = ImGui::GetCurrentContext();
-
-	g_plot = ImPlot::CreateContext();
+	g_plot	= ImPlot::CreateContext();
 
 	glfwSetMouseButtonCallback(g_window, ImGui_ImplGlfw_MouseButtonCallback);
 	glfwSetScrollCallback(g_window, ImGui_ImplGlfw_ScrollCallback);
@@ -343,8 +337,8 @@ void loop()
 
 	ImGui::SetCurrentContext(g_imgui);
 
-	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
+	ImGui_ImplOpenGL3_NewFrame();
 	ImGui::NewFrame();
 
 	if (g_multi != -1)
