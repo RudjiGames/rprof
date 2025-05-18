@@ -129,7 +129,7 @@ namespace rprof {
 		{
 			std::swap(m_namesData[BufferUse::Capture], m_namesData[BufferUse::Display]);
 
-			for (int i=0; i<m_scopesOpen; ++i)
+			for (uint32_t i=0; i<m_scopesOpen; ++i)
 				m_scopesDisplay[i] = scopesDisplay[i];
 
 			m_displayScopes		= m_scopesOpen;
