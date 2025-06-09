@@ -64,9 +64,9 @@ for:
       - git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
      
     install:
-      - build\tools\bin\windows\genie.exe --file=rprof\genie\genie.lua vs2019
+      - build\tools\bin\windows\genie.exe --file=rprof\genie\genie.lua vs2022
       
-    build: ../.build/windows/vs2019/rprof/projects/rprof.sln
+    build: ../.build/windows/vs2022/rprof/projects/rprof.sln
 
 # ======================================
 #      Linux
