@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Milos Tosic. All Rights Reserved.
+ * Copyright 2025 Milos Tosic. All Rights Reserved.
  * License: http://www.opensource.org/licenses/BSD-2-Clause
  *
  * rprof - profiling library
@@ -86,31 +86,31 @@ typedef struct ProfilerFrame
 	void rprofShutDown();
 
 	/* Sets the minimum time (in ms) to trigger a capture call back. */
-	/* _ms    - time in ms to use as minimum, if set to 0 (defauult) then every frame triggers a call back */
-	/* _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame */
+	/* @param[in] _ms    - time in ms to use as minimum, if set to 0 (defauult) then every frame triggers a call back */
+	/* @param[in] _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame */
 	void rprofSetThreshold(float _ms, int _level = 0);
 
 	/* Registers thread name. */
-	/* _name     - name to use for this thread */
-	/* _threadID - ID of thread to register, 0 for current thread. */
+	/* @param[in] _name     - name to use for this thread */
+	/* @param[in] _threadID - ID of thread to register, 0 for current thread. */
 	void rprofRegisterThread(const char* _name, uint64_t _threadID = 0);
 
 	/* Unregisters thread name and releases name string. */
-	/* _threadID - thread ID */
+	/* @param[in] _threadID - thread ID */
 	void rprofUnregisterThread(uint64_t _threadID);
 
 	/* Must be called once per frame at the frame start */
 	void rprofBeginFrame();
 
 	/* Begins a profiling scope/block. */
-	/* _file - name of source file */
-	/* _line - line of source file */
-	/* _name - name of the scope */
-	/* Returns: scope handle */
+	/* @param[in] _file - name of source file */
+	/* @param[in] _line - line of source file */
+	/* @param[in] _name - name of the scope */
+	/* @returns scope handle */
 	uintptr_t rprofBeginScope(const char* _file, int _line, const char* _name);
 
 	/* Stops a profiling scope/block. */
-	/* _scopeHandle	- handle of the scope to be closed */
+	/* @param[in] _scopeHandle	- handle of the scope to be closed */
 	void rprofEndScope(uintptr_t _scopeHandle);
 
 	/* Returns non zero value if profiling is paused. */
@@ -120,45 +120,53 @@ typedef struct ProfilerFrame
 	int rprofWasThresholdCrossed();
 
 	/* Pauses profiling if the value passed is 0, otherwise resumes profiling. */
+	/* @param[in] _paused    	- 0 for pause, any other value to resume */
 	void rprofSetPaused(int _paused);
 
 	/* Fetches data of the last saved frame (either threshold exceeded or profiling is paused). */
+	/* @param[out] _data    	- Pointer to frame data structure */
 	void rprofGetFrame(ProfilerFrame* _data);
 
 	/* Saves profiler data to a binary buffer. */
-	/* _data       - profiler data / single frame capture */
-	/* _buffer     - buffer to store data to */
-	/* _bufferSize - maximum size of buffer, in bytes */
-	/* Returns: number of bytes written to buffer. 0 for failure. */
+	/* @param[in] _data       - profiler data / single frame capture */
+	/* @param[in,out] _buffer - buffer to store data to */
+	/* @param[in] _bufferSize - maximum size of buffer, in bytes */
+	/* @returns number of bytes written to buffer. 0 for failure. */
 	int rprofSave(ProfilerFrame* _data, void* _buffer, size_t _bufferSize);
 
 	/* Loads a single frame capture from a binary buffer. */
-	/* _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease. */
-	/* _buffer     - buffer to store data to */
-	/* _bufferSize - maximum size of buffer, in bytes */
+	/* @param[in] _data       - [in/out] profiler data / single frame capture. User is responsible to release memory using rprofRelease. */
+	/* @param[in,out] _buffer - buffer to store data to */
+	/* @param[in] _bufferSize - maximum size of buffer, in bytes */
 	void rprofLoad(ProfilerFrame* _data, void* _buffer, size_t _bufferSize);
 
 	/* Loads a only time in miliseconds for a single frame capture from a binary buffer. */
-	/* _time       - [in/out] frame timne in ms. */
-	/* _buffer     - buffer to store data to */
-	/* _bufferSize - maximum size of buffer, in bytes */
+	/* @param[in] _time       - [in/out] frame timne in ms. */
+	/* @param[in,out] _buffer - buffer to store data to */
+	/* @param[in] _bufferSize - maximum size of buffer, in bytes */
 	void rprofLoadTimeOnly(float* _time, void* _buffer, size_t _bufferSize);
 
 	/* Releases resources for a single frame capture. Only valid for data loaded with rprofLoad. */
-	/* _data       - data to be released */
+	/* @param[in] _data       - data to be released */
 	void rprofRelease(ProfilerFrame* _data);
 	
 	/* Returns CPU clock. */
+	/* @returns CPU clock counter. */
 	uint64_t rprofGetClock();
 
 	/* Returns CPU frequency. */
+	/* @returns CPU frequency. */
 	uint64_t rprofGetClockFrequency();
 
 	/* Calculates miliseconds from CPU clock. */
+	/* @param[in] _clock       - data to be released */
+	/* @param[in] _frequency   - data to be released */
+	/* @returns time in milliseconds. */
 	float rprofClock2ms(uint64_t _clock, uint64_t _frequency);
 
 	/* Returns name of the platform. */
-	/* _platformID - platform identifier */
+	/* @param[in] _platformID - platform identifier */
+	/* @returns platform name as string. */
 	const char* rprofGetPlatformName(uint8_t _platformID);
 
 #ifdef __cplusplus
