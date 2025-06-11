@@ -1,14 +1,11 @@
 /*
- * Copyright 2023 Milos Tosic. All Rights Reserved.
+ * Copyright 2025 Milos Tosic. All Rights Reserved.
  * License: http://www.opensource.org/licenses/BSD-2-Clause
  */
 
 #include "../inc/rprof.h"
 #include "rprof_config.h"
 #include "rprof_context.h"
-
-#include <unordered_map>
-#include <vector>
 
 #include "../3rd/lz4-r191/lz4.h"
 #if !RPROF_LZ4_NO_DEFINE
@@ -21,10 +18,18 @@ extern "C" uint64_t rprofGetClockFrequency();
  * Data load/save functions
  *------------------------------------------------------------------------*/
 
+static inline void memoryCopy(void* _dst, const void* _src, size_t _len)
+{
+	const uint8_t* src = (const uint8_t*)_src;
+	uint8_t* dst = (uint8_t*)_dst;
+	for (size_t i=0; i<_len; ++i)
+		dst[i] = src[i];
+}
+
 template <typename T>
 static inline void writeVar(uint8_t*& _buffer, T _var)
 {
-	memcpy(_buffer, &_var, sizeof(T));
+	memoryCopy(_buffer, &_var, sizeof(T));
 	_buffer += sizeof(T);
 }
 
@@ -32,14 +37,14 @@ static inline void writeStr(uint8_t*& _buffer, const char* _str)
 {
 	uint32_t len = (uint32_t)strlen(_str);
 	writeVar(_buffer, len);
-	memcpy(_buffer, _str, len);
+	memoryCopy(_buffer, _str, len);
 	_buffer += len;
 }
 
 template <typename T>
 static inline void readVar(uint8_t*& _buffer, T& _var)
 {
-	memcpy(&_var, _buffer, sizeof(T));
+	memoryCopy(&_var, _buffer, sizeof(T));
 	_buffer += sizeof(T);
 }
 	
@@ -48,7 +53,7 @@ static inline char* readString(uint8_t*& _buffer)
 	uint32_t len;
 	readVar(_buffer, len);
 	char* str = new char[len+1];
-	memcpy(str, _buffer, len);
+	memoryCopy(str, _buffer, len);
 	str[len] = 0;
 	_buffer += len;
 	return str;

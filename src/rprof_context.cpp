@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Milos Tosic. All Rights Reserved.
+ * Copyright 2025 Milos Tosic. All Rights Reserved.
  * License: http://www.opensource.org/licenses/BSD-2-Clause
  */
 
@@ -8,7 +8,6 @@
 #include "rprof_platform.h"
 #include "rprof_context.h"
 #include "rprof_tls.h"
-#include "string.h" // memcpy
 
 extern "C" uint64_t rprofGetClockFrequency();
 
@@ -130,7 +129,8 @@ namespace rprof {
 		{
 			std::swap(m_namesData[BufferUse::Capture], m_namesData[BufferUse::Display]);
 
-			memcpy(m_scopesDisplay, scopesDisplay, sizeof(ProfilerScope) * m_scopesOpen);
+			for (uint32_t i=0; i<m_scopesOpen; ++i)
+				m_scopesDisplay[i] = scopesDisplay[i];
 
 			m_displayScopes		= m_scopesOpen;
 			m_frameStartTime	= frameBeginTime;
@@ -245,7 +245,7 @@ namespace rprof {
 		_data->m_levelThreshold	= m_levelThreshold;
 		_data->m_platformID		= getPlatformID();
 
-		std::map<uint64_t, std::string>::iterator it = m_threadNames.begin();
+		std::unordered_map<uint64_t, std::string>::iterator it = m_threadNames.begin();
 		for (uint32_t i=0; i<numThreads; ++i)
 		{
 			threadData[i].m_threadID	= it->first;

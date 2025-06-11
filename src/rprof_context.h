@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Milos Tosic. All Rights Reserved.
+ * Copyright 2025 Milos Tosic. All Rights Reserved.
  * License: http://www.opensource.org/licenses/BSD-2-Clause
  */
 
@@ -11,7 +11,7 @@
 #include "rprof_mutex.h"
 #include "rprof_freelist.h"
 
-#include <map>
+#include <unordered_map>
 #include <string>
 
 namespace rprof {
@@ -45,7 +45,7 @@ namespace rprof {
 		int				m_namesSize[BufferUse::Count];
 		uint32_t		m_tlsLevel;
 
-		std::map<uint64_t, std::string>	m_threadNames;
+		std::unordered_map<uint64_t, std::string>	m_threadNames;
 
 	public:
 		ProfilerContext();
