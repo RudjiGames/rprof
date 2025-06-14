@@ -59,17 +59,17 @@ typedef struct ProfilerThread
 typedef struct ProfilerFrame
 {
 	uint32_t			m_numScopes;
+	uint32_t			m_numThreads		: 20;
+	uint32_t			m_platformID		:  4;
+	uint32_t			m_levelThreshold	:  8;
 	ProfilerScope*		m_scopes;
-	uint32_t			m_numThreads;
 	ProfilerThread*		m_threads;
 	uint64_t			m_startTime;
 	uint64_t			m_endtime;
 	uint64_t			m_prevFrameTime;
 	uint64_t			m_CPUFrequency;
 	float				m_timeThreshold;
-	uint32_t			m_levelThreshold;
 	uint32_t			m_numScopesStats;
-	uint8_t				m_platformID;
 	ProfilerScope*		m_scopesStats;
 	ProfilerScopeStats*	m_scopeStatsInfo;
 
@@ -87,7 +87,7 @@ typedef struct ProfilerFrame
 
 	/* Sets the minimum time (in ms) to trigger a capture call back. */
 	/* @param[in] _ms    - time in ms to use as minimum, if set to 0 (defauult) then every frame triggers a call back */
-	/* @param[in] _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame */
+	/* @param[in] _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame, maximum is 256. */
 	void rprofSetThreshold(float _ms, int _level = 0);
 
 	/* Registers thread name. */
