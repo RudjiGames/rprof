@@ -26,6 +26,7 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * Structures describing profiling data
  *------------------------------------------------------------------------*/
+
 typedef struct ProfilerScopeStats
 {
 	uint64_t			m_inclusiveTime;
@@ -59,16 +60,16 @@ typedef struct ProfilerThread
 typedef struct ProfilerFrame
 {
 	uint32_t			m_numScopes;
-	uint32_t			m_numThreads		: 20;
-	uint32_t			m_platformID		:  4;
-	uint32_t			m_levelThreshold	:  8;
+	uint32_t			m_numThreads;
+	uint32_t			m_platformID;
+	float				m_timeThreshold;
 	ProfilerScope*		m_scopes;
 	ProfilerThread*		m_threads;
 	uint64_t			m_startTime;
 	uint64_t			m_endtime;
 	uint64_t			m_prevFrameTime;
 	uint64_t			m_CPUFrequency;
-	float				m_timeThreshold;
+	uint32_t			m_levelThreshold;
 	uint32_t			m_numScopesStats;
 	ProfilerScope*		m_scopesStats;
 	ProfilerScopeStats*	m_scopeStatsInfo;
@@ -87,7 +88,7 @@ typedef struct ProfilerFrame
 
 	/* Sets the minimum time (in ms) to trigger a capture call back. */
 	/* @param[in] _ms    - time in ms to use as minimum, if set to 0 (defauult) then every frame triggers a call back */
-	/* @param[in] _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame, maximum is 256. */
+	/* @param[in] _level - scope depth in which to look for scopes longer than _ms threshold, 0 is for entire frame. */
 	void rprofSetThreshold(float _ms, int _level = 0);
 
 	/* Registers thread name. */

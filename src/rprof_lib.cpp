@@ -211,8 +211,7 @@ extern "C" {
 		writeVar(buffer, _data->m_startTime);
 		writeVar(buffer, _data->m_endtime);
 		writeVar(buffer, _data->m_prevFrameTime);
-		uint8_t PlatformID = (uint8_t)_data->m_platformID;
-		writeVar(buffer, PlatformID);
+		writeVar(buffer, _data->m_platformID);
 		writeVar(buffer, rprofGetClockFrequency());
 
 		// write scopes
@@ -273,9 +272,7 @@ extern "C" {
 		readVar(buffer, _data->m_startTime);
 		readVar(buffer, _data->m_endtime);
 		readVar(buffer, _data->m_prevFrameTime);
-		uint8_t platformID = 0;
-		readVar(buffer, platformID);
-		_data->m_platformID = platformID;
+		readVar(buffer, _data->m_platformID);
 		readVar(buffer, _data->m_CPUFrequency);
 
 		// read scopes
@@ -307,9 +304,7 @@ extern "C" {
 		}
 
 		// read thread info
-		uint32_t numThreads;
-		readVar(buffer, numThreads);
-		_data->m_numThreads = numThreads;
+		readVar(buffer, _data->m_numThreads);
 		_data->m_threads = new ProfilerThread[_data->m_numThreads];
 		for (uint32_t i=0; i<_data->m_numThreads; ++i)
 		{
