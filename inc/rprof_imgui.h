@@ -90,8 +90,8 @@
 	{
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
 		{
-			if (a.m_threadID < b.m_threadID)	return true;
-			if (b.m_threadID < a.m_threadID)	return false;
+			if (a.m_threadID < b.m_threadID) return true;
+			if (b.m_threadID < a.m_threadID) return false;
 
 			if (a.m_level < b.m_level) return true;
 			if (b.m_level < a.m_level) return false;
