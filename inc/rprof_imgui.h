@@ -297,7 +297,7 @@
 			}
 
 			ImGui::Separator();
-			ImGui::PlotHistogram("", frameTimes, RPROF_MAX_FRAME_TIMES, 0, "", 0.f, maxFrameTime, ImVec2(s.x - 9.0f, 45));
+			ImGui::PlotHistogram("frames", frameTimes, RPROF_MAX_FRAME_TIMES, 0, "", 0.f, maxFrameTime, ImVec2(s.x - 9.0f, 45));
 		}
 		else
 		{

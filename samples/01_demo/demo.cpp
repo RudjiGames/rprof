@@ -54,9 +54,9 @@ struct rprofApp : public rapp::App
 
 		static const rapp::InputBinding bindings[] =
 		{
-			{ NULL, "exit", 1, { rapp::KeyboardState::Key::KeyQ,   rapp::KeyboardState::Modifier::LCtrl  }},
-			{ NULL, "exit", 1, { rapp::KeyboardState::Key::KeyQ,   rapp::KeyboardState::Modifier::RCtrl  }},
-			{ NULL, "hide", 1, { rapp::KeyboardState::Key::Tilde,  rapp::KeyboardState::Modifier::NoMods }},
+			{ NULL, "exit", 1, { rapp::KeyboardKey::KeyQ,   rapp::KeyboardModifier::LCtrl }},
+			{ NULL, "exit", 1, { rapp::KeyboardKey::KeyQ,   rapp::KeyboardModifier::RCtrl }},
+			{ NULL, "hide", 1, { rapp::KeyboardKey::Tilde,  rapp::KeyboardModifier::None  }},
 			RAPP_INPUT_BINDING_END
 		};
 
@@ -69,7 +69,7 @@ struct rprofApp : public rapp::App
 		m_width		= width;
 		m_height	= height;
 
-		rapp::appGraphicsInit(this, m_width, m_height);
+		rapp::appGraphicsInit(this, m_width, m_height, RAPP_WINDOW_FLAG_DPI_AWARE);
 
 		RPROF_INIT();
 		RPROF_REGISTER_THREAD("Application thread");
