@@ -9,6 +9,7 @@
 #include "rprof.h"
 #include <algorithm>
 #include <inttypes.h>
+#include <rapp/3rd/imgui/imgui.h>
 
 	#define RPROF_DESIRED_FRAME_RATE	 30.0f
 	#define RPROF_MINIMUM_FRAME_RATE	 20.0f
