@@ -440,13 +440,13 @@
 		return ret;
 	}
 
-	struct sortExcusive {
+	static struct sortExcusive {
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const {
 			return  (a.m_stats->m_exclusiveTimeTotal > b.m_stats->m_exclusiveTimeTotal);
 		}
 	} customLessExc;
 
-	struct sortInclusive {
+	static struct sortInclusive {
 		bool operator()(const ProfilerScope& a, const ProfilerScope& b) const {
 			return  (a.m_stats->m_inclusiveTimeTotal > b.m_stats->m_inclusiveTimeTotal);
 		}
