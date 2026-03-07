@@ -162,7 +162,7 @@ extern "C" {
 
 	void rprofSetPaused(int _paused)
 	{
-		return g_context->setPaused(_paused != 0);
+		g_context->setPaused(_paused != 0);
 	}
 
 	void rprofGetFrame(ProfilerFrame* _data)
@@ -411,17 +411,19 @@ extern "C" {
 
 		uint64_t startTime;
 		uint64_t endtime;
-		uint8_t  dummy8;
+		uint32_t dummy32;
 		uint64_t frequency;
+
+		uint8_t* bufferOriginal = buffer;
 
 		readVar(buffer, startTime);
 		readVar(buffer, endtime);
 		readVar(buffer, frequency);	// dummy
-		readVar(buffer, dummy8);	// dummy
+		readVar(buffer, dummy32);	// dummy
 		readVar(buffer, frequency);
 		*_time = rprofClock2ms(endtime - startTime, frequency);
 
-		delete[] buffer;
+		delete[] bufferOriginal;
 	}
 
 	void rprofRelease(ProfilerFrame* _data)

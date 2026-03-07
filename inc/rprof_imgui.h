@@ -13,7 +13,7 @@
 
 	#define RPROF_DESIRED_FRAME_RATE	 30.0f
 	#define RPROF_MINIMUM_FRAME_RATE	 20.0f
-	#define RPROF_FLASHL_TIME_IN_MS		333.0f
+	#define RPROF_FLASH_TIME_IN_MS		333.0f
 
 	static const int	s_maxLevelColors = 11;
 	static const ImU32	s_levelColors[s_maxLevelColors] = {
@@ -29,13 +29,13 @@
 	static const char*	s_statClickedName		= 0;
 	static uint32_t		s_statClickedLevel		= 0;
 
-	struct PanAndZoon
+	struct PanAndZoom
 	{
 		float	m_offset;
 		float	m_startPan;
 		float	m_zoom;
 
-		PanAndZoon()
+		PanAndZoom()
 		{
 			m_offset	= 0.0f;
 			m_startPan	= 0.0f;
@@ -63,8 +63,8 @@
 		ImVec4 white4 = ImColor(IM_COL32_WHITE);
 
 		float msSince = rprofClock2ms(_elapsedTime, rprofGetClockFrequency());
-		msSince = rprofMin(msSince, RPROF_FLASHL_TIME_IN_MS);
-		msSince = 1.0f - (msSince / RPROF_FLASHL_TIME_IN_MS);
+		msSince = rprofMin(msSince, RPROF_FLASH_TIME_IN_MS);
+		msSince = 1.0f - (msSince / RPROF_FLASH_TIME_IN_MS);
 
 		ImVec4 col4 = ImColor(_drawColor);
 		_drawColor = ImColor(	col4.x + (white4.x - col4.x) * msSince,
@@ -226,7 +226,7 @@
 		float frameEndX		= frameStartX + s.x - 23;
 		float frameStartY	= p.y;
 
-		static PanAndZoon paz;
+		static PanAndZoom paz;
 
 		ImVec2 mpos = ImGui::GetMousePos();
 

@@ -75,7 +75,7 @@
 #if RPROF_PLATFORM_XBOXONE
 	#include <windows.h>
 #elif RPROF_PLATFORM_WINDOWS
-	#define WINDOWS_LEAN_AND_MEAN
+	#define WIN32_LEAN_AND_MEAN
 	#ifndef _WIN32_WINNT
 		#define _WIN32_WINNT 0x601
 	#endif
