@@ -126,7 +126,8 @@ typedef struct ProfilerFrame
 
 	/* Fetches data of the last saved frame (either threshold exceeded or profiling is paused). */
 	/* @param[out] _data    	- Pointer to frame data structure */
-	void rprofGetFrame(ProfilerFrame* _data);
+	/* @returns non zero on success */
+	int rprofGetFrame(ProfilerFrame* _data);
 
 	/* Saves profiler data to a binary buffer. */
 	/* @param[in] _data       - profiler data / single frame capture */

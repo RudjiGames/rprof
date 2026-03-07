@@ -119,7 +119,8 @@ extern "C" {
 
 	void rprofSetThreshold(float _ms, int _level)
 	{
-		g_context->setThreshold(_ms, _level);
+		if (g_context)
+			g_context->setThreshold(_ms, _level);
 	}
 
 	void rprofRegisterThread(const char* _name, uint64_t _threadID)
@@ -127,46 +128,56 @@ extern "C" {
 		if (_threadID == 0)
 			_threadID = getThreadID();
 
-		g_context->registerThread(_threadID, _name);
+		if (g_context)
+			g_context->registerThread(_threadID, _name);
 	}
 
 	void rprofUnregisterThread(uint64_t _threadID)
 	{
-		g_context->unregisterThread(_threadID);
+		if (g_context)
+			g_context->unregisterThread(_threadID);
 	}
 
 	void rprofBeginFrame()
 	{
-		g_context->beginFrame();
+		if (g_context)
+			g_context->beginFrame();
 	}
 
 	uintptr_t rprofBeginScope(const char* _file, int _line, const char* _name)
 	{
-		return (uintptr_t)g_context->beginScope(_file, _line, _name);
+		if (g_context)
+			return (uintptr_t)g_context->beginScope(_file, _line, _name);
+		return 0;
 	}
 
 	void rprofEndScope(uintptr_t _scopeHandle)
 	{
-		g_context->endScope((ProfilerScope*)_scopeHandle);
+		if (g_context)
+			g_context->endScope((ProfilerScope*)_scopeHandle);
 	}
 
 	int rprofIsPaused()
 	{
-		return g_context->isPaused() ? 1 : 0;
+		return g_context && g_context->isPaused() ? 1 : 0;
 	}
 
 	int rprofWasThresholdCrossed()
 	{
-		return g_context->wasThresholdCrossed() ? 1 : 0;
+		return g_context && g_context->wasThresholdCrossed() ? 1 : 0;
 	}
 
 	void rprofSetPaused(int _paused)
 	{
-		g_context->setPaused(_paused != 0);
+		if (g_context)
+			g_context->setPaused(_paused != 0);
 	}
 
-	void rprofGetFrame(ProfilerFrame* _data)
+	int  rprofGetFrame(ProfilerFrame* _data)
 	{
+		if (!g_context)
+			return 0;
+
 		g_context->getFrameData(_data);
 
 		// clamp scopes crossing frame boundary
@@ -182,6 +193,8 @@ extern "C" {
 					cs.m_start = _data->m_startTime;
 			}
 		}
+
+		return 1;
 	}
 
 	int rprofSave(ProfilerFrame* _data, void* _buffer, size_t _bufferSize)

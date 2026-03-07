@@ -62,11 +62,13 @@ namespace rprof {
 
 	void ProfilerContext::registerThread(uint64_t _threadID, const char* _name)
 	{
+		ScopedMutexLocker lock(m_mutex);
 		m_threadNames[_threadID] = _name;
 	}
 
 	void ProfilerContext::unregisterThread(uint64_t _threadID)
 	{
+		ScopedMutexLocker lock(m_mutex);
 		m_threadNames.erase(_threadID);
 	}
 
