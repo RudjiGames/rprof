@@ -278,7 +278,7 @@ extern "C" {
 			buffer = new uint8_t[bufferSize];
 			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
 
-		} while (decomp < 0);
+		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
 
 		bufferPtr = buffer;
 
@@ -341,17 +341,17 @@ extern "C" {
 		{
 			ProfilerScope& scope = _data->m_scopes[i];
 			uintptr_t idx = (uintptr_t)scope.m_name;
-			scope.m_name = duplicateString(strings[(uint32_t)idx]);
+			scope.m_name = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
 
 			idx = (uintptr_t)scope.m_file;
-			scope.m_file = duplicateString(strings[(uint32_t)idx]);
+			scope.m_file = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
 		}
 
 		for (uint32_t i=0; i<_data->m_numThreads; ++i)
 		{
 			ProfilerThread& t = _data->m_threads[i];
 			uintptr_t idx = (uintptr_t)t.m_name;
-			t.m_name = duplicateString(strings[(uint32_t)idx]);
+			t.m_name = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
 		}
 
 		for (uint32_t i=0; i<numStrings; ++i)
@@ -423,7 +423,7 @@ extern "C" {
 			buffer = new uint8_t[bufferSize];
 			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
 
-		} while (decomp < 0);
+		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
 
 		uint64_t startTime;
 		uint64_t endtime, prevFrameTime;

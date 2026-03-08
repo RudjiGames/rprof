@@ -15,4 +15,6 @@
  *------------------------------------------------------------------------*/
 #define RPROF_LZ4_NO_DEFINE			0
 
+#define RPROF_LZ4_BUFFER_MAX_SIZE   (16*1024*1024)
+
 #endif /* RPROF_CONFIG_H */
