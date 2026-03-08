@@ -333,7 +333,7 @@ extern "C" {
 		uint32_t numStrings;
 		readVar(buffer, numStrings);
 
-		const char*	strings[RPROF_SCOPES_MAX];
+		const char** strings = new const char*[numStrings];
 		for (uint32_t i=0; i<numStrings; ++i)
 			strings[i] = readString(buffer);
 
@@ -356,7 +356,8 @@ extern "C" {
 
 		for (uint32_t i=0; i<numStrings; ++i)
 			delete[] strings[i];
-
+		
+		delete[] strings;
 		delete[] bufferPtr;
 
 		// process frame data
@@ -435,6 +436,7 @@ extern "C" {
 		readVar(buffer, platformID);		// dummy
 		readVar(buffer, frequency);
 		*_time = rprofClock2ms(endtime - startTime, frequency);
+		delete[] buffer;
 	}
 
 	void rprofRelease(ProfilerFrame* _data)
@@ -531,7 +533,7 @@ extern "C" {
 
 	float rprofClock2ms(uint64_t _clock, uint64_t _frequency)
 	{
-		return (float(_clock) / float(_frequency)) * 1000.0f;
+		return _frequency ? (float(_clock) / float(_frequency)) * 1000.0f : 0.0f;
 	}
 
 	const char* rprofGetPlatformName(uint8_t _platformID)

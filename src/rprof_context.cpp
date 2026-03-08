@@ -173,10 +173,9 @@ namespace rprof {
 	{
 		ProfilerScope* scope = 0;
 		{
+			ScopedMutexLocker lock(m_mutex);
 			if (m_scopesOpen == RPROF_SCOPES_MAX)
 				return 0;
-
-			ScopedMutexLocker lock(m_mutex);
 
 			scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
 			m_scopesCapture[m_scopesOpen++] = scope;
