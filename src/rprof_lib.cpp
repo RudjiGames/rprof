@@ -356,7 +356,7 @@ extern "C" {
 
 		for (uint32_t i=0; i<numStrings; ++i)
 			delete[] strings[i];
-		
+
 		delete[] strings;
 		delete[] bufferPtr;
 
@@ -430,13 +430,14 @@ extern "C" {
 		uint32_t platformID;
 		uint64_t frequency;
 
+		uint8_t* bufPtr = buffer;
 		readVar(buffer, startTime);
 		readVar(buffer, endtime);
 		readVar(buffer, prevFrameTime);	// dummy
 		readVar(buffer, platformID);		// dummy
 		readVar(buffer, frequency);
 		*_time = rprofClock2ms(endtime - startTime, frequency);
-		delete[] buffer;
+		delete[] bufPtr;
 	}
 
 	void rprofRelease(ProfilerFrame* _data)
