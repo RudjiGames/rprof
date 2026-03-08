@@ -173,22 +173,22 @@ namespace rprof {
 	{
 		ProfilerScope* scope = 0;
 		{
-			ScopedMutexLocker lock(m_mutex);
 			if (m_scopesOpen == RPROF_SCOPES_MAX)
 				return 0;
+
+			ScopedMutexLocker lock(m_mutex);
 
 			scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
 			m_scopesCapture[m_scopesOpen++] = scope;
 
-			scope->m_name	= addString(_name, BufferUse::Capture);
-			scope->m_start	= rprofGetClock();
-			scope->m_end	= scope->m_start;
+			scope->m_name		= addString(_name, BufferUse::Capture);
+			scope->m_start		= rprofGetClock();
+			scope->m_end		= scope->m_start;
+			scope->m_threadID	= getThreadID();
+			scope->m_file		= _file;
+			scope->m_line		= _line;
+			scope->m_level		= incLevel();
 		}
-
-		scope->m_threadID	= getThreadID();
-		scope->m_file		= _file;
-		scope->m_line		= _line;
-		scope->m_level		= incLevel();
 
 		return scope;
 	}

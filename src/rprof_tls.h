@@ -61,24 +61,24 @@ namespace rprof {
 
 	static inline uint32_t tlsAllocate()
 	{
-		uint32_t handle;
-		pthread_key_create((pthread_key_t*)&handle, 0);
-		return handle;
+		pthread_key_t handle;
+		pthread_key_create(&handle, 0);
+		return (uint32_t)handle;
 	}
 
 	static inline void tlsSetValue(uint32_t _handle, void* _value)
 	{
-		pthread_setspecific(_handle, _value);
+		pthread_setspecific((pthread_key_t)_handle, _value);
 	}
 
 	static inline void* tlsGetValue(uint32_t _handle)
 	{
-		return pthread_getspecific(_handle);
+		return pthread_getspecific((pthread_key_t)_handle);
 	}
 
 	static inline void tlsFree(uint32_t _handle)
 	{
-		pthread_key_delete(_handle);
+		pthread_key_delete((pthread_key_t)_handle);
 	}
 
 #else

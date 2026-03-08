@@ -254,14 +254,14 @@ void profilerFrameLoad(const char* _name, uint32_t _offset, uint32_t _size)
 			fseek(file, _offset + 4, SEEK_SET);
 
 		static const size_t maxDecompSize = 4 * 1024 * 1024;
-		char* compBuffer = (char*)malloc(csize);
-		char* decompBuffer = (char*)malloc(maxDecompSize);
-		char* bufferReadPtr = decompBuffer;
+		uint8_t* compBuffer		= new uint8_t[csize];
+		uint8_t* decompBuffer	= new uint8_t[maxDecompSize];
+		uint8_t* bufferReadPtr	= decompBuffer;
 
 		fread(compBuffer, 1, csize, file);
 		rprofLoad(&g_frame, compBuffer, csize);
-		free(decompBuffer);
-		free(compBuffer);
+		delete[] decompBuffer;
+		delete[] compBuffer;
 
 		fclose(file);
 	}
@@ -277,7 +277,7 @@ void profilerFrameLoadMulti(const char* _name)
 		long fileSize = ftell(file);
 		fseek(file, 0, SEEK_SET);
 
-		uint8_t* fileBuffer = (uint8_t*)malloc(fileSize);
+		uint8_t* fileBuffer = new uint8_t[fileSize];
 		fread(fileBuffer, 1, fileSize, file);
 		fclose(file);
 
@@ -298,6 +298,7 @@ void profilerFrameLoadMulti(const char* _name)
 			rprofRelease(&g_frame);
 			offset += frameSize;
 		}
+		delete[] fileBuffer;
 	}
 
 	profilerFrameLoad(g_fileName, g_frameInfos[0].m_offset, g_frameInfos[0].m_size);

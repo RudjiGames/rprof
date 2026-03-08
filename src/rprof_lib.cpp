@@ -61,6 +61,8 @@ static inline char* readString(uint8_t*& _buffer)
 
 const char* duplicateString(const char* _str)
 {
+	if (!_str)
+		return nullptr;
 	char* str = new char[strlen(_str)+1];
 	strcpy(str, _str);
 	return str;
@@ -212,13 +214,13 @@ extern "C" {
 			strStore.addString(_data->m_threads[i].m_name);
 		}
 
-		// calc data size
-		uint32_t totalSize =	_data->m_numScopes  * sizeof(ProfilerScope)  +
+		// calc data size, overestimate to be safe
+		uint32_t maxTotalSize =	_data->m_numScopes  * sizeof(ProfilerScope)  +
 								_data->m_numThreads * sizeof(ProfilerThread) +
 								sizeof(ProfilerFrame) +
 								strStore.m_totalSize;
 
-		uint8_t* buffer = new uint8_t[totalSize];
+		uint8_t* buffer = new uint8_t[maxTotalSize];
 		uint8_t* bufPtr = buffer;
 
 		writeVar(buffer, _data->m_startTime);
@@ -423,20 +425,16 @@ extern "C" {
 		} while (decomp < 0);
 
 		uint64_t startTime;
-		uint64_t endtime;
-		uint32_t dummy32;
+		uint64_t endtime, prevFrameTime;
+		uint32_t platformID;
 		uint64_t frequency;
-
-		uint8_t* bufferOriginal = buffer;
 
 		readVar(buffer, startTime);
 		readVar(buffer, endtime);
-		readVar(buffer, frequency);	// dummy
-		readVar(buffer, dummy32);	// dummy
+		readVar(buffer, prevFrameTime);	// dummy
+		readVar(buffer, platformID);		// dummy
 		readVar(buffer, frequency);
 		*_time = rprofClock2ms(endtime - startTime, frequency);
-
-		delete[] bufferOriginal;
 	}
 
 	void rprofRelease(ProfilerFrame* _data)
