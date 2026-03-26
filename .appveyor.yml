@@ -67,7 +67,7 @@ for:
       - zidar\tools\bin\windows\genie.exe --file=rprof\scripts\genie.lua --with-samples vs2022
       
     build: 
-      project: .zidar\windows\vs2022\rprof\projects\rprof.sln
+      project: .zidar\windows\vs2022\rprof\projects\vs2022\rprof.sln
 
 # ======================================
 #      Linux
