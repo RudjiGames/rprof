@@ -3,7 +3,7 @@
 -- License: http://www.opensource.org/licenses/BSD-2-Clause
 --
 
-newoption { trigger = "zidar-path", description = "Path to zidar" }
+newoption({ trigger = "zidar-path", description = "Path to zidar" })
 
 if not _OPTIONS["zidar-path"] then
 	if os.isfile("../../zidar/zidar.lua") then
@@ -15,7 +15,8 @@ if not _OPTIONS["zidar-path"] then
 end
 
 dofile(_OPTIONS["zidar-path"] .. "/zidar.lua")
-dofile "rprof.lua"
+dofile("rprof.lua")
 
-solution "rprof"
-	addLibProjects("rprof")
+solution("rprof")
+setPlatforms()
+addLibProjects("rprof")
