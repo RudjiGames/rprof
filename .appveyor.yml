@@ -57,17 +57,17 @@ for:
     init:
       - git clone --recursive https://github.com/RudjiGames/rapp    rapp
       - git clone https://github.com/RudjiGames/rprof   rprof
-      - git clone https://github.com/RudjiGames/build   build
+      - git clone https://github.com/RudjiGames/zidar   zidar
       - git clone https://github.com/RudjiGames/rbase   rbase
       - git clone https://github.com/bkaradzic/bx.git   bx
       - git clone https://github.com/bkaradzic/bimg.git bimg
       - git clone https://github.com/bkaradzic/bgfx.git bgfx
      
     install:
-      - build\tools\bin\windows\genie.exe --file=rprof\genie\genie.lua --with-samples vs2022
+      - build\tools\bin\windows\genie.exe --file=rprof\scripts\genie.lua --with-samples vs2022
       
     build: 
-      project: .build\windows\vs2022\rprof\projects\rprof.sln
+      project: .zidar\windows\vs2022\rprof\projects\rprof.sln
 
 # ======================================
 #      Linux
@@ -82,7 +82,7 @@ for:
       - sudo apt-get update --allow-releaseinfo-change && sudo apt install -y xorg libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libegl1-mesa-dev
       - git clone --recursive https://github.com/RudjiGames/rapp  rapp
       - git clone https://github.com/RudjiGames/rprof rprof
-      - git clone https://github.com/RudjiGames/build build
+      - git clone https://github.com/RudjiGames/zidar zidar
       - git clone https://github.com/RudjiGames/rbase rbase
       - git clone https://github.com/bkaradzic/bx     bx
       - git clone https://github.com/bkaradzic/bimg   bimg
@@ -93,10 +93,10 @@ for:
       - mkdir glfwbuild && cd glfwbuild && cmake ../glfw -DGLFW_BUILD_TESTS=OFF && make -j4 && sudo make install && cd ..
 
     install:
-      - ./GENie/bin/linux/genie --file=rprof/genie/genie.lua --with-samples --gcc=linux-gcc gmake
+      - ./GENie/bin/linux/genie --file=rprof/scripts/genie.lua --with-samples --gcc=linux-gcc gmake
   
     build_script:
-      - cd ./.build/linux/linux-gcc/rprof/projects/
+      - cd ./.zidar/linux/linux-gcc/rprof/projects/
       - make config=${buildcfg}
 
 # ======================================
@@ -111,17 +111,17 @@ for:
     init:
       - git clone --recursive https://github.com/RudjiGames/rapp    rapp
       - git clone https://github.com/RudjiGames/rprof   rprof
-      - git clone https://github.com/RudjiGames/build   build
+      - git clone https://github.com/RudjiGames/zidar   zidar
       - git clone https://github.com/RudjiGames/rbase   rbase
       - git clone https://github.com/bkaradzic/bx.git   bx
       - git clone https://github.com/bkaradzic/bimg.git bimg
       - git clone https://github.com/bkaradzic/bgfx.git bgfx
-      - git clone https://github.com/bkaradzic/GENie GENie  # build GENie from source: we don't know the target CPU, can't use ARM binary from 'build'
+      - git clone https://github.com/bkaradzic/GENie GENie  # build GENie from source: we don't know the target CPU, can't use ARM binary from 'zidar'
       - cd GENie && make && cd ..
       
     install:
-      - ./GENie/bin/darwin/genie --file=rprof/genie/genie.lua --with-samples --gcc=osx-x64 gmake
+      - ./GENie/bin/darwin/genie --file=rprof/scripts/genie.lua --with-samples --gcc=osx-x64 gmake
     
     build_script:
-      - cd ./.build/osx/clang/rprof/projects/
+      - cd ./.zidar/osx/clang/rprof/projects/
       - make config=${buildcfg}

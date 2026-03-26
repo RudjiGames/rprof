@@ -18,5 +18,4 @@ dofile(_OPTIONS["zidar-path"] .. "/zidar.lua")
 dofile "rprof.lua"
 
 solution "rprof"
-	setPlatforms()
 	addLibProjects("rprof")
