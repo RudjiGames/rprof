@@ -1,90 +1,62 @@
 #
-# Copyright (c) 2025 by Milos Toisc. All rights reserved.
-# License: http://www.opensource.org/licenses/BSD-2-Clause
+# Copyright 2025-2026 Milos Tosic. All rights reserved.
+# License: https://github.com/RudjiGames/rg_core/blob/master/LICENSE
 #
 
-GENIE=../build/tools/bin/$(OS)/genie
-
-all:
-	$(GENIE) vs2015
-	$(GENIE) vs2017
-	$(GENIE) --gcc=android-arm gmake
-	$(GENIE) --gcc=android-mips gmake
-	$(GENIE) --gcc=android-x86 gmake
-	$(GENIE) --gcc=mingw-gcc gmake
-	$(GENIE) --gcc=linux-gcc gmake
-	$(GENIE) --gcc=osx gmake
-	$(GENIE) --gcc=ios-arm gmake
-	$(GENIE) --gcc=ios-simulator gmake
-	$(GENIE) --gcc=ios-simulator64 gmake
-	$(GENIE) xcode4
-
-gmake-linux:
-	$(GENIE) --file=genie/genie.lua --gcc=linux-gcc gmake
-linux-debug32: gmake-linux
-	make -R -C ../.build/linux/gcc/rprof/projects config=debug32
-linux-release32: gmake-linux
-	make -R -C ../.build/linux/gcc/rprof/projects config=release32
-linux-debug64: gmake-linux
-	make -R -C ../.build/linux/gcc/rprof/projects config=debug64
-linux-release64: gmake-linux
-	make -R -C ../.build/linux/gcc/rprof/projects config=release64
-linux: linux-debug64 linux-release64 ## linux-debug32 linux-release32 
-
-gmake-mingw-gcc:
-	$(GENIE) --file=genie/genie.lua --gcc=mingw-gcc gmake
-mingw-gcc-debug32: gmake-mingw-gcc
-	make -R -C ../.build/windows/mingw-gcc/rprof/projects config=debug32
-mingw-gcc-release32: gmake-mingw-gcc
-	make -R -C ../.build/windows/mingw-gcc/rprof/projects config=release32
-mingw-gcc-debug64: gmake-mingw-gcc
-	make -R -C ../.build/windows/mingw-gcc/rprof/projects config=debug64
-mingw-gcc-release64: gmake-mingw-gcc
-	make -R -C ../.build/windows/mingw-gcc/rprof/projects config=release64
-mingw-gcc: mingw-gcc-debug32 mingw-gcc-release32 mingw-gcc-debug64 mingw-gcc-release64
-
-gmake-mingw-clang:
-	$(GENIE) --file=genie/genie.lua --clang=mingw-clang gmake
-mingw-clang-debug32: gmake-mingw-clang
-	make -R -C ../.build/windows/mingw-clang/rprof/projects config=debug32
-mingw-clang-release32: gmake-mingw-clang
-	make -R -C ../.build/windows/mingw-clang/rprof/projects config=release32
-mingw-clang-debug64: gmake-mingw-clang
-	make -R -C ../.build/windows/mingw-clang/rprof/projects config=debug64
-mingw-clang-release64: gmake-mingw-clang
-	make -R -C ../.build/windows/mingw-clang/rprof/projects config=release64
-mingw-clang: mingw-clang-debug32 mingw-clang-release32 mingw-clang-debug64 mingw-clang-release64
-
-vs2015:
-	$(GENIE) --file=genie/genie.lua vs2015
-
-vs2017:
-	$(GENIE) --file=genie/genie.lua vs2017
-
-../.build/osx/clang/rprof/projects:
-	$(GENIE) --file=genie/genie.lua --gcc=osx gmake
-osx-debug64: ../.build/osx/clang/rprof/projects
-	make -C ../.build/osx/clang/rprof/projects config=debug64
-osx-release64: ../.build/osx/clang/rprof/projects
-	make -C ../.build/osx/clang/rprof/projects config=release64
-osx: osx-debug64 osx-release64
-
-clean:
-	@echo Cleaning...
-	-@rm -rf ../.build
-
-###
-
-SILENT ?= @
-
 UNAME := $(shell uname)
-ifeq ($(UNAME),$(filter $(UNAME),Linux GNU Darwin))
+ifeq ($(UNAME),$(filter $(UNAME),Linux Darwin))
 ifeq ($(UNAME),$(filter $(UNAME),Darwin))
 OS=darwin
 else
 OS=linux
 endif
+
+help:
+	@echo Available targets:
+	@grep -E "^[a-zA-Z0-9_-]+:.*?## .*$$" $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 else
 OS=windows
-endif 
 
+help:
+	@echo Available targets:
+	@for /F "tokens=1,2 delims=#" %%a in ('findstr /R /C:"^[a-zA-Z0-9_-]*:.*## " $(MAKEFILE_LIST)') do @echo   [36m%%a[0m %%b
+endif
+
+GetParentDir  = $(dir ${1:/=})
+
+RG_ZIDAR_DIR?=
+# If RG_ZIDAR_DIR does not exist, search parent directories for 'zidar'
+# 7 levels up should be enough for most cases, but can be increased if needed.
+ifeq ($(wildcard $(RG_ZIDAR_DIR)),)
+  _d0 := $(CURDIR)/
+  _d1 := $(call GetParentDir, $(_d0))
+  _d2 := $(call GetParentDir, $(_d1))
+  _d3 := $(call GetParentDir, $(_d2))
+  _d4 := $(call GetParentDir, $(_d3))
+  _d5 := $(call GetParentDir, $(_d4))
+  _d6 := $(call GetParentDir, $(_d5))
+  _d7 := $(call GetParentDir, $(_d6))
+  RG_ZIDAR_DIR := $(firstword $(foreach d,$(_d0) $(_d1) $(_d2) $(_d3) $(_d4) $(_d5) $(_d6) $(_d7),$(wildcard $(d)zidar)))
+  ifeq ($(RG_ZIDAR_DIR),)
+    $(error RG_ZIDAR_DIR not found in any parent directory)
+  endif
+endif
+
+GENIE?=$(RG_ZIDAR_DIR)/tools/bin/$(OS)/genie $(EXTRA_GENIE_ARGS) --zidar-path=$(RG_ZIDAR_DIR)
+NINJA?=$(RG_ZIDAR_DIR)/tools/bin/$(OS)/ninja
+
+.PHONY: help
+
+clean:   ## Clean all intermediate files.
+	@echo Cleaning...
+	-@rm -rf .zidar
+
+projgen: ## Generate project files for all configurations.
+	@echo Generating project files...
+	$(GENIE) --with-samples --with-unittests --with-tools vs2022
+	$(GENIE) --with-samples --with-unittests --with-tools --gcc=linux-clang   gmake
+	$(GENIE) --with-samples --with-unittests --with-tools --gcc=linux-gcc     gmake
+	$(GENIE) --with-samples --with-unittests --with-tools --gcc=osx-arm64     gmake
+	$(GENIE) --with-samples --with-unittests --with-tools --xcode=osx         xcode9
+	$(GENIE) --with-samples --with-unittests --with-tools --xcode=ios         xcode9
+	$(GENIE) --with-samples --with-unittests --with-tools --gcc=android-arm64 gmake
