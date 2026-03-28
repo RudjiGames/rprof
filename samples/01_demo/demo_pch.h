@@ -7,7 +7,5 @@
 #include <rbase/inc/console.h>
 #include <rbase/inc/thread.h>
 
-#define RAPP_WITH_BGFX 1
 #include <rapp/inc/rapp.h>
-
 #include <rprof/inc/rprof.h>
