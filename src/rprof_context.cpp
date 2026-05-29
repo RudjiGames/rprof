@@ -95,14 +95,20 @@ namespace rprof {
 		{
 			ProfilerScope* scope = m_scopesCapture[i];
 
-			if (scope->m_start == scope->m_end)
+			// m_end may be written concurrently by endScope on another thread,
+			// so read it exactly once, atomically
+			uint64_t scopeEnd = rprofAtomicLoad64(&scope->m_end);
+			bool stillOpen = (scope->m_start == scopeEnd);
+
+			if (stillOpen)
 				scope->m_name = addString(scope->m_name, BufferUse::Open);
 
 			scopesDisplay[i] = *scope;
+			scopesDisplay[i].m_end = scopeEnd;
 
 			// scope that was not closed, spans frame boundary
 			// keep it for next frame
-			if (scope->m_start == scope->m_end)
+			if (stillOpen)
 				m_scopesCapture[scopesToRestart++] = scope;
 			else
 			{
@@ -113,11 +119,9 @@ namespace rprof {
 			// did scope cross threshold?
 			if (level == (int)scope->m_level)
 			{
-				uint64_t scopeEnd = scope->m_end;
-				if (scope->m_start == scope->m_end)
-					scopeEnd = frameEndTime;
+				uint64_t scopeEndTime = stillOpen ? frameEndTime : scopeEnd;
 
-				if (m_timeThreshold <= rprofClock2ms(scopeEnd - scope->m_start, rprofGetClockFrequency()))
+				if (m_timeThreshold <= rprofClock2ms(scopeEndTime - scope->m_start, rprofGetClockFrequency()))
 					m_thresholdCrossed = true;
 			}
 		}
@@ -182,7 +186,7 @@ namespace rprof {
 
 			scope->m_name		= addString(_name, BufferUse::Capture);
 			scope->m_start		= rprofGetClock();
-			scope->m_end		= scope->m_start;
+			rprofAtomicStore64(&scope->m_end, scope->m_start);
 			scope->m_threadID	= getThreadID();
 			scope->m_file		= _file;
 			scope->m_line		= _line;
@@ -197,7 +201,10 @@ namespace rprof {
 		if (!_scope)
 			return;
 
-		_scope->m_end = rprofGetClock();
+		// m_end is read by beginFrame (under the mutex) on another thread,
+		// while this write happens without the lock - store it atomically
+		// to avoid a torn read / data race
+		rprofAtomicStore64(&_scope->m_end, rprofGetClock());
 		decLevel();
 	}
 
@@ -205,6 +212,11 @@ namespace rprof {
 	{
 		char*	nameData = m_namesData[_buffer];
 		int&	nameSize = m_namesSize[_buffer];
+
+		// names buffer is full; return a safe empty string instead of a
+		// pointer past the end of the buffer
+		if (nameSize >= RPROF_TEXT_MAX)
+			return "";
 
 		char *ret = &nameData[nameSize];
 		while (nameSize < RPROF_TEXT_MAX)

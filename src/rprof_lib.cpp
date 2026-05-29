@@ -48,10 +48,25 @@ static inline void readVar(uint8_t*& _buffer, T& _var)
 	_buffer += sizeof(T);
 }
 	
-static inline char* readString(uint8_t*& _buffer)
+// bounds-checked variants used when parsing untrusted capture buffers
+
+template <typename T>
+static inline bool readVarSafe(uint8_t*& _buffer, const uint8_t* _end, T& _var)
+{
+	if ((size_t)(_end - _buffer) < sizeof(T))
+		return false;
+	memoryCopy(&_var, _buffer, sizeof(T));
+	_buffer += sizeof(T);
+	return true;
+}
+
+static inline char* readStringSafe(uint8_t*& _buffer, const uint8_t* _end)
 {
 	uint32_t len;
-	readVar(_buffer, len);
+	if (!readVarSafe(_buffer, _end, len))
+		return 0;
+	if ((size_t)(_end - _buffer) < len)
+		return 0;
 	char* str = new char[len+1];
 	memoryCopy(str, _buffer, len);
 	str[len] = 0;
@@ -111,6 +126,9 @@ extern "C" {
 	void rprofInit()
 	{
 		g_context = new rprof::ProfilerContext();
+		// pre-calibrate the clock frequency now, outside of any lock, so the
+		// first rprofBeginFrame() does not stall while holding the mutex
+		rprofGetClockFrequency();
 	}
 
 	void rprofShutDown()
@@ -282,36 +300,70 @@ extern "C" {
 
 		bufferPtr = buffer;
 
-		uint32_t strIdx;
+		// leave the frame in a safe, releasable state until parsing succeeds
+		_data->m_numScopes		= 0;
+		_data->m_numScopesStats	= 0;
+		_data->m_numThreads		= 0;
+		_data->m_scopes			= 0;
+		_data->m_scopesStats	= 0;
+		_data->m_scopeStatsInfo	= 0;
+		_data->m_threads		= 0;
 
-		readVar(buffer, _data->m_startTime);
-		readVar(buffer, _data->m_endtime);
-		readVar(buffer, _data->m_prevFrameTime);
-		readVar(buffer, _data->m_platformID);
-		readVar(buffer, _data->m_CPUFrequency);
+		// decompression never succeeded - nothing we can safely parse
+		if (decomp < 0)
+		{
+			delete[] bufferPtr;
+			return;
+		}
+
+		const uint8_t* bufferEnd = bufferPtr + decomp;
+
+		uint32_t numScopes	= 0;
+		uint32_t numThreads	= 0;
+		uint32_t numStrings	= 0;
+		uint32_t strIdx;
+		bool ok = true;
+
+		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_startTime);
+		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_endtime);
+		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_prevFrameTime);
+		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_platformID);
+		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_CPUFrequency);
 
 		// read scopes
-		readVar(buffer, _data->m_numScopes);
+		ok = ok && readVarSafe(buffer, bufferEnd, numScopes);
 
-		_data->m_scopes			= new ProfilerScope[_data->m_numScopes * 2]; // extra space for viewer - m_scopesStats
-		_data->m_scopesStats	= &_data->m_scopes[_data->m_numScopes];
-		_data->m_scopeStatsInfo	= new ProfilerScopeStats[_data->m_numScopes * 2];
+		// a serialized scope is 40 bytes; reject counts that cannot possibly fit
+		// in the decompressed data to avoid integer overflow / over-allocation
+		if (ok && (numScopes > (size_t)(bufferEnd - buffer) / 40))
+			ok = false;
 
-		for (uint32_t i=0; i<_data->m_numScopes*2; ++i)
+		if (!ok)
+		{
+			delete[] bufferPtr;
+			return;
+		}
+
+		_data->m_numScopes		= numScopes;
+		_data->m_scopes			= new ProfilerScope[(size_t)numScopes * 2]; // extra space for viewer - m_scopesStats
+		_data->m_scopesStats	= &_data->m_scopes[numScopes];
+		_data->m_scopeStatsInfo	= new ProfilerScopeStats[(size_t)numScopes * 2];
+
+		for (uint32_t i=0; i<numScopes*2; ++i)
 			_data->m_scopes[i].m_stats = &_data->m_scopeStatsInfo[i];
 
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
+		for (uint32_t i=0; i<numScopes && ok; ++i)
 		{
 			ProfilerScope& scope = _data->m_scopes[i];
-			readVar(buffer, scope.m_start);
-			readVar(buffer, scope.m_end);
-			readVar(buffer, scope.m_threadID);
-			readVar(buffer, strIdx);
+			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_start);
+			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_end);
+			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_threadID);
+			ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
 			scope.m_name = (const char*)(uintptr_t)strIdx;
-			readVar(buffer, strIdx);
+			ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
 			scope.m_file = (const char*)(uintptr_t)strIdx;
-			readVar(buffer, scope.m_line);
-			readVar(buffer, scope.m_level);
+			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_line);
+			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_level);
 
 			scope.m_stats->m_inclusiveTime	= scope.m_end - scope.m_start;
 			scope.m_stats->m_exclusiveTime	= scope.m_stats->m_inclusiveTime;
@@ -319,25 +371,73 @@ extern "C" {
 		}
 
 		// read thread info
-		readVar(buffer, _data->m_numThreads);
-		_data->m_threads = new ProfilerThread[_data->m_numThreads];
-		for (uint32_t i=0; i<_data->m_numThreads; ++i)
+		ok = ok && readVarSafe(buffer, bufferEnd, numThreads);
+
+		// a serialized thread is 12 bytes
+		if (ok && (numThreads > (size_t)(bufferEnd - buffer) / 12))
+			ok = false;
+
+		if (ok)
 		{
-			ProfilerThread& t = _data->m_threads[i];
-			readVar(buffer, t.m_threadID);
-			readVar(buffer, strIdx);
-			t.m_name = (const char*)(uintptr_t)strIdx;
+			_data->m_numThreads	= numThreads;
+			_data->m_threads	= new ProfilerThread[numThreads];
+			for (uint32_t i=0; i<numThreads && ok; ++i)
+			{
+				ProfilerThread& t = _data->m_threads[i];
+				ok = ok && readVarSafe(buffer, bufferEnd, t.m_threadID);
+				ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
+				t.m_name = (const char*)(uintptr_t)strIdx;
+			}
 		}
 
 		// read string data
-		uint32_t numStrings;
-		readVar(buffer, numStrings);
+		ok = ok && readVarSafe(buffer, bufferEnd, numStrings);
 
-		const char** strings = new const char*[numStrings];
-		for (uint32_t i=0; i<numStrings; ++i)
-			strings[i] = readString(buffer);
+		// each string is at least a 4-byte length prefix
+		if (ok && (numStrings > (size_t)(bufferEnd - buffer) / 4))
+			ok = false;
 
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
+		const char** strings = 0;
+		if (ok)
+		{
+			strings = new const char*[numStrings];
+			for (uint32_t i=0; i<numStrings; ++i)
+				strings[i] = 0;
+			for (uint32_t i=0; i<numStrings && ok; ++i)
+			{
+				strings[i] = readStringSafe(buffer, bufferEnd);
+				if (!strings[i])
+					ok = false;
+			}
+		}
+
+		// bail out cleanly on a malformed buffer - at this point scope/thread
+		// names still hold raw indices (not heap pointers), so we must not let
+		// rprofRelease try to free them
+		if (!ok)
+		{
+			if (strings)
+			{
+				for (uint32_t i=0; i<numStrings; ++i)
+					delete[] strings[i];
+				delete[] strings;
+			}
+			delete[] bufferPtr;
+
+			delete[] _data->m_scopes;
+			delete[] _data->m_threads;
+			delete[] _data->m_scopeStatsInfo;
+			_data->m_scopes			= 0;
+			_data->m_scopesStats	= 0;
+			_data->m_scopeStatsInfo	= 0;
+			_data->m_threads		= 0;
+			_data->m_numScopes		= 0;
+			_data->m_numScopesStats	= 0;
+			_data->m_numThreads		= 0;
+			return;
+		}
+
+		for (uint32_t i=0; i<numScopes; ++i)
 		{
 			ProfilerScope& scope = _data->m_scopes[i];
 			uintptr_t idx = (uintptr_t)scope.m_name;
@@ -347,7 +447,7 @@ extern "C" {
 			scope.m_file = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
 		}
 
-		for (uint32_t i=0; i<_data->m_numThreads; ++i)
+		for (uint32_t i=0; i<numThreads; ++i)
 		{
 			ProfilerThread& t = _data->m_threads[i];
 			uintptr_t idx = (uintptr_t)t.m_name;
@@ -397,7 +497,14 @@ extern "C" {
 			{
 				int index = _data->m_numScopesStats++;
 				ProfilerScope& scope = _data->m_scopesStats[index];
+
+				// the struct copy below clobbers m_stats, so preserve this
+				// entry's own dedicated stats slot and copy the values into it
+				// rather than aliasing the source scope's stats
+				ProfilerScopeStats* stats	= scope.m_stats;
 				scope						= scopeI;
+				scope.m_stats				= stats;
+				*scope.m_stats				= *scopeI.m_stats;
 				scope.m_stats->m_occurences	= 1;
 			}
 			else
@@ -425,18 +532,27 @@ extern "C" {
 
 		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
 
-		uint64_t startTime;
-		uint64_t endtime, prevFrameTime;
+		uint64_t startTime = 0;
+		uint64_t endtime = 0, prevFrameTime;
 		uint32_t platformID;
-		uint64_t frequency;
+		uint64_t frequency = 0;
 
 		uint8_t* bufPtr = buffer;
-		readVar(buffer, startTime);
-		readVar(buffer, endtime);
-		readVar(buffer, prevFrameTime);	// dummy
-		readVar(buffer, platformID);		// dummy
-		readVar(buffer, frequency);
-		*_time = rprofClock2ms(endtime - startTime, frequency);
+		*_time = 0.0f;
+
+		if (decomp >= 0)
+		{
+			const uint8_t* bufferEnd = bufPtr + decomp;
+			bool ok = true;
+			ok = ok && readVarSafe(buffer, bufferEnd, startTime);
+			ok = ok && readVarSafe(buffer, bufferEnd, endtime);
+			ok = ok && readVarSafe(buffer, bufferEnd, prevFrameTime);	// dummy
+			ok = ok && readVarSafe(buffer, bufferEnd, platformID);		// dummy
+			ok = ok && readVarSafe(buffer, bufferEnd, frequency);
+			if (ok)
+				*_time = rprofClock2ms(endtime - startTime, frequency);
+		}
+
 		delete[] bufPtr;
 	}
 
@@ -494,10 +610,10 @@ extern "C" {
 	{
 #if   RPROF_PLATFORM_WINDOWS
 	#if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__)
-		static uint64_t frequency = 1;
-		static bool initialized = false;
-		while (!initialized)
-		{
+		// C++11 guarantees thread-safe, once-only initialization of a
+		// function-local static, so the rdtsc calibration runs exactly once
+		// even when called concurrently
+		static const uint64_t frequency = []() -> uint64_t {
 			LARGE_INTEGER li1, li2;
 			QueryPerformanceCounter(&li1);
 			uint64_t tsc1 = __rdtsc();
@@ -508,9 +624,10 @@ extern "C" {
 			LARGE_INTEGER lif;
 			QueryPerformanceFrequency(&lif);
 			uint64_t time = ((li2.QuadPart - li1.QuadPart) * 1000) / lif.QuadPart;
-			frequency = (uint64_t)(1000 * ((tsc2 - tsc1) / time));
-			initialized = true;
-		}
+			if (time == 0)
+				return 1;
+			return (uint64_t)(1000 * ((tsc2 - tsc1) / time));
+		}();
 		return frequency;
 	#else
 		LARGE_INTEGER li;

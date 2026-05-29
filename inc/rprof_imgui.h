@@ -134,14 +134,14 @@
 			winpos = ImGui::GetWindowPos();
 
 		float deltaTime = rprofClock2ms(_data->m_endtime - _data->m_startTime, _data->m_CPUFrequency);
-		float frameRate = 1000.0f / deltaTime;
+		float frameRate = deltaTime > 0.0f ? 1000.0f / deltaTime : 0.0f;
 
 		ImVec4 col = triColor(frameRate, RPROF_MINIMUM_FRAME_RATE, RPROF_DESIRED_FRAME_RATE);
-		 
+
 		ImGui::Text("FPS: ");
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, col);
-		ImGui::Text("%.1f    ", 1000.0f / deltaTime);
+		ImGui::Text("%.1f    ", frameRate);
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Frame time: ");
@@ -162,11 +162,12 @@
 		else
 		{
 			float prevFrameTime = rprofClock2ms(_data->m_prevFrameTime, _data->m_CPUFrequency);
+			float prevFrameRate = prevFrameTime > 0.0f ? 1000.0f/prevFrameTime : 0.0f;
 			ImGui::SameLine();
 			ImGui::Text("Prev frame: ");
-			ImGui::PushStyleColor(ImGuiCol_Text, triColor(1000.0f/prevFrameTime, RPROF_MINIMUM_FRAME_RATE, RPROF_DESIRED_FRAME_RATE));
+			ImGui::PushStyleColor(ImGuiCol_Text, triColor(prevFrameRate, RPROF_MINIMUM_FRAME_RATE, RPROF_DESIRED_FRAME_RATE));
 			ImGui::SameLine();
-			ImGui::Text("%.3f ms  %.2f fps   ", prevFrameTime, 1000.0f/prevFrameTime);
+			ImGui::Text("%.3f ms  %.2f fps   ", prevFrameTime, prevFrameRate);
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 
@@ -274,7 +275,7 @@
 
 		static const int	RPROF_MAX_FRAME_TIMES = 128;
 		static float s_frameTimes[RPROF_MAX_FRAME_TIMES];
-		static int	 s_currentFrame = 0;
+		static uint32_t s_currentFrame = 0;	// unsigned: well-defined wrap, and 2^32 is a multiple of RPROF_MAX_FRAME_TIMES
 
 		float maxFrameTime = 0.0f;
 		if (_inGame)
@@ -505,9 +506,10 @@
 		{
 			ProfilerScope& cs = _data->m_scopesStats[i];
 
-			float endXpct = float(cs.m_stats->m_exclusiveTimeTotal) / float(totalTime);
+			float denom = float(totalTime);
+			float endXpct = denom > 0.0f ? float(cs.m_stats->m_exclusiveTimeTotal) / denom : 0.0f;
 			if (exclusive == 1)
-				endXpct = float(cs.m_stats->m_inclusiveTimeTotal) / float(totalTime);
+				endXpct = denom > 0.0f ? float(cs.m_stats->m_inclusiveTimeTotal) / denom : 0.0f;
 
 			float startX = frameStartX;
 			float endX = frameStartX + endXpct * (frameEndX - frameStartX);
@@ -571,7 +573,7 @@
 
 				ImGui::TextColored(ImVec4(0, 255, 255, 255), "Of frame: ");
 				ImGui::SameLine();
-				ImGui::TextColored(ImVec4(230, 230, 230, 255), "%2.2f %%", 100.0f*ttime/deltaTime);
+				ImGui::TextColored(ImVec4(230, 230, 230, 255), "%2.2f %%", deltaTime > 0.0f ? 100.0f*ttime/deltaTime : 0.0f);
 
 				ImGui::TextColored(ImVec4(0, 255, 255, 255), "File: ");
 				ImGui::SameLine();

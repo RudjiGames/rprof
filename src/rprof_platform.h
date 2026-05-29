@@ -158,6 +158,28 @@ static inline uint8_t getPlatformID()
 }
 
 /*--------------------------------------------------------------------------*/
+static inline void rprofAtomicStore64(uint64_t* _ptr, uint64_t _val)
+{
+#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
+	_InterlockedExchange64((volatile long long*)_ptr, (long long)_val);
+#else
+	__atomic_store_n(_ptr, _val, __ATOMIC_RELEASE);
+#endif
+}
+
+/*--------------------------------------------------------------------------*/
+static inline uint64_t rprofAtomicLoad64(const uint64_t* _ptr)
+{
+#if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
+	// no dedicated atomic load intrinsic on MSVC; a compare-exchange against
+	// itself returns the current value without modifying it
+	return (uint64_t)_InterlockedCompareExchange64((volatile long long*)_ptr, 0, 0);
+#else
+	return __atomic_load_n(_ptr, __ATOMIC_ACQUIRE);
+#endif
+}
+
+/*--------------------------------------------------------------------------*/
 static inline const char* getPlatformName(uint8_t _platformID)
 {
 	switch (_platformID)
