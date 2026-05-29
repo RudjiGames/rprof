@@ -74,12 +74,14 @@
  *------------------------------------------------------------------------*/
 #if RPROF_PLATFORM_XBOXONE
 	#include <windows.h>
+	#include <intrin.h>	// _Interlocked* / __rdtsc intrinsics
 #elif RPROF_PLATFORM_WINDOWS
 	#define WIN32_LEAN_AND_MEAN
 	#ifndef _WIN32_WINNT
 		#define _WIN32_WINNT 0x601
 	#endif
 	#include <windows.h>
+	#include <intrin.h>	// _Interlocked* / __rdtsc intrinsics
 #elif RPROF_PLATFORM_PS3
 	#include <sys/ppu_thread.h>
 	#include <sys/sys_time.h>
@@ -161,7 +163,18 @@ static inline uint8_t getPlatformID()
 static inline void rprofAtomicStore64(uint64_t* _ptr, uint64_t _val)
 {
 #if RPROF_PLATFORM_WINDOWS || RPROF_PLATFORM_XBOXONE
-	_InterlockedExchange64((volatile long long*)_ptr, (long long)_val);
+	// _InterlockedExchange64 is not available on 32-bit x86, but
+	// _InterlockedCompareExchange64 is available on every architecture, so
+	// implement the store as a compare-exchange loop
+	volatile long long*	p		= (volatile long long*)_ptr;
+	long long			oldVal	= *p;
+	for (;;)
+	{
+		long long prev = _InterlockedCompareExchange64(p, (long long)_val, oldVal);
+		if (prev == oldVal)
+			break;
+		oldVal = prev;
+	}
 #else
 	__atomic_store_n(_ptr, _val, __ATOMIC_RELEASE);
 #endif
