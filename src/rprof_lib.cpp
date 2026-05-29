@@ -4,8 +4,12 @@
  */
 
 #include "../inc/rprof.h"
+#include "../inc/rprof_cstd.h"
 #include "rprof_config.h"
 #include "rprof_context.h"
+#include "rprof_alloc.h"
+
+#include <algorithm>
 
 #include "../3rd/lz4-r191/lz4.h"
 #if !RPROF_LZ4_NO_DEFINE
@@ -35,7 +39,7 @@ static inline void writeVar(uint8_t*& _buffer, T _var)
 
 static inline void writeStr(uint8_t*& _buffer, const char* _str)
 {
-	uint32_t len = (uint32_t)strlen(_str);
+	uint32_t len = (uint32_t)rprofStrLen(_str);
 	writeVar(_buffer, len);
 	memoryCopy(_buffer, _str, len);
 	_buffer += len;
@@ -67,7 +71,7 @@ static inline char* readStringSafe(uint8_t*& _buffer, const uint8_t* _end)
 		return 0;
 	if ((size_t)(_end - _buffer) < len)
 		return 0;
-	char* str = new char[len+1];
+	char* str = (char*)rprofAlloc(len+1);
 	memoryCopy(str, _buffer, len);
 	str[len] = 0;
 	_buffer += len;
@@ -78,8 +82,8 @@ const char* duplicateString(const char* _str)
 {
 	if (!_str)
 		return nullptr;
-	char* str = new char[strlen(_str)+1];
-	strcpy(str, _str);
+	char* str = (char*)rprofAlloc(rprofStrLen(_str)+1);
+	rprofStrCpy(str, _str);
 	return str;
 }
 
@@ -103,7 +107,7 @@ struct StringStore
 		if (it == m_stringIndexMap.end())
 		{
 			uint32_t index = (uint32_t)m_stringIndexMap.size();
-			m_totalSize				+= 4 + (uint32_t)strlen(_str);	// see writeStr for details
+			m_totalSize				+= 4 + (uint32_t)rprofStrLen(_str);	// see writeStr for details
 			m_stringIndexMap[_str]	 = index;
 			m_strings[index]		 = _str;
 		}
@@ -121,7 +125,51 @@ struct StringStore
 
 rprof::ProfilerContext*	g_context = 0;
 
+// host provided allocator (see rprofSetAllocator)
+static rprofAllocFn	g_allocFn	= 0;
+static rprofFreeFn	g_freeFn	= 0;
+static void*		g_allocUD	= 0;
+
+extern "C" void* rprofAlloc(size_t _size)
+{
+	return g_allocFn ? g_allocFn(g_allocUD, _size) : 0;
+}
+
+extern "C" void rprofFree(void* _ptr)
+{
+	if (g_freeFn && _ptr)
+		g_freeFn(g_allocUD, _ptr);
+}
+
+// orders scopes so a parent is immediately followed by its (properly nested)
+// descendants: by thread, then start ascending, then end descending
+struct SortNested
+{
+	bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
+	{
+		if (a.m_threadID != b.m_threadID)	return a.m_threadID < b.m_threadID;
+		if (a.m_start    != b.m_start)		return a.m_start    < b.m_start;
+		return a.m_end > b.m_end;
+	}
+};
+
+// groups scopes with identical names next to each other
+struct SortName
+{
+	bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
+	{
+		return rprofStrCmp(a.m_name, b.m_name) < 0;
+	}
+};
+
 extern "C" {
+
+	void rprofSetAllocator(rprofAllocFn _alloc, rprofFreeFn _free, void* _userData)
+	{
+		g_allocFn = _alloc;
+		g_freeFn  = _free;
+		g_allocUD = _userData;
+	}
 
 	void rprofInit()
 	{
@@ -238,7 +286,7 @@ extern "C" {
 								sizeof(ProfilerFrame) +
 								strStore.m_totalSize;
 
-		uint8_t* buffer = new uint8_t[maxTotalSize];
+		uint8_t* buffer = (uint8_t*)rprofAlloc(maxTotalSize);
 		uint8_t* bufPtr = buffer;
 
 		writeVar(buffer, _data->m_startTime);
@@ -278,7 +326,7 @@ extern "C" {
 			writeStr(buffer, strStore.m_strings[i].c_str());
 
 		int compSize = LZ4_compress_default((const char*)bufPtr, (char*)_buffer, (int)(buffer - bufPtr), (int)_bufferSize);
-		delete[] bufPtr;
+		rprofFree(bufPtr);
 		return compSize;
 	}
 
@@ -291,9 +339,9 @@ extern "C" {
 		int decomp = -1;
 		do 
 		{
-			delete[] buffer;
+			rprofFree(buffer);
 			bufferSize *= 2;
-			buffer = new uint8_t[bufferSize];
+			buffer = (uint8_t*)rprofAlloc(bufferSize);
 			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
 
 		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
@@ -312,7 +360,7 @@ extern "C" {
 		// decompression never succeeded - nothing we can safely parse
 		if (decomp < 0)
 		{
-			delete[] bufferPtr;
+			rprofFree(bufferPtr);
 			return;
 		}
 
@@ -340,14 +388,14 @@ extern "C" {
 
 		if (!ok)
 		{
-			delete[] bufferPtr;
+			rprofFree(bufferPtr);
 			return;
 		}
 
 		_data->m_numScopes		= numScopes;
-		_data->m_scopes			= new ProfilerScope[(size_t)numScopes * 2]; // extra space for viewer - m_scopesStats
+		_data->m_scopes			= (ProfilerScope*)rprofAlloc(sizeof(ProfilerScope) * (size_t)numScopes * 2); // extra space for viewer - m_scopesStats
 		_data->m_scopesStats	= &_data->m_scopes[numScopes];
-		_data->m_scopeStatsInfo	= new ProfilerScopeStats[(size_t)numScopes * 2];
+		_data->m_scopeStatsInfo	= (ProfilerScopeStats*)rprofAlloc(sizeof(ProfilerScopeStats) * (size_t)numScopes * 2);
 
 		for (uint32_t i=0; i<numScopes*2; ++i)
 			_data->m_scopes[i].m_stats = &_data->m_scopeStatsInfo[i];
@@ -380,7 +428,7 @@ extern "C" {
 		if (ok)
 		{
 			_data->m_numThreads	= numThreads;
-			_data->m_threads	= new ProfilerThread[numThreads];
+			_data->m_threads	= (ProfilerThread*)rprofAlloc(sizeof(ProfilerThread) * numThreads);
 			for (uint32_t i=0; i<numThreads && ok; ++i)
 			{
 				ProfilerThread& t = _data->m_threads[i];
@@ -400,7 +448,7 @@ extern "C" {
 		const char** strings = 0;
 		if (ok)
 		{
-			strings = new const char*[numStrings];
+			strings = (const char**)rprofAlloc(sizeof(const char*) * numStrings);
 			for (uint32_t i=0; i<numStrings; ++i)
 				strings[i] = 0;
 			for (uint32_t i=0; i<numStrings && ok; ++i)
@@ -419,14 +467,14 @@ extern "C" {
 			if (strings)
 			{
 				for (uint32_t i=0; i<numStrings; ++i)
-					delete[] strings[i];
-				delete[] strings;
+					rprofFree((void*)strings[i]);
+				rprofFree(strings);
 			}
-			delete[] bufferPtr;
+			rprofFree(bufferPtr);
 
-			delete[] _data->m_scopes;
-			delete[] _data->m_threads;
-			delete[] _data->m_scopeStatsInfo;
+			rprofFree(_data->m_scopes);
+			rprofFree(_data->m_threads);
+			rprofFree(_data->m_scopeStatsInfo);
 			_data->m_scopes			= 0;
 			_data->m_scopesStats	= 0;
 			_data->m_scopeStatsInfo	= 0;
@@ -455,65 +503,90 @@ extern "C" {
 		}
 
 		for (uint32_t i=0; i<numStrings; ++i)
-			delete[] strings[i];
+			rprofFree((void*)strings[i]);
 
-		delete[] strings;
-		delete[] bufferPtr;
+		rprofFree(strings);
+		rprofFree(bufferPtr);
 
 		// process frame data
 
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
-		for (uint32_t j=0; j<_data->m_numScopes; ++j)
-		{
-			ProfilerScope& scopeI = _data->m_scopes[i];
-			ProfilerScope& scopeJ = _data->m_scopes[j];
+		const uint32_t numScopesLocal = _data->m_numScopes;
 
-			if ((scopeJ.m_start > scopeI.m_start) && (scopeJ.m_end < scopeI.m_end) &&
-				(scopeJ.m_level == scopeI.m_level + 1) && (scopeJ.m_threadID == scopeI.m_threadID))
-				scopeI.m_stats->m_exclusiveTime -= scopeJ.m_stats->m_inclusiveTime;
+		// --- exclusive time: subtract each scope's direct children -----------
+		// Sort by (thread, start asc, end desc) so a scope's descendants are
+		// contiguous after it and properly nested, then walk an ancestor stack
+		// in a single pass instead of comparing every scope against every other.
+		std::sort(&_data->m_scopes[0], &_data->m_scopes[numScopesLocal], SortNested());
+
+		// ancestor stack of indices into m_scopes; nesting depth never exceeds
+		// the scope count, and a captured frame holds at most RPROF_SCOPES_MAX
+		static uint32_t s_stack[RPROF_SCOPES_MAX];
+		uint32_t sp = 0;
+		uint64_t stackThread = 0;
+
+		for (uint32_t i=0; i<numScopesLocal; ++i)
+		{
+			ProfilerScope& s = _data->m_scopes[i];
+
+			// scopes are grouped by thread - reset the stack on each new thread
+			if (sp == 0 || s.m_threadID != stackThread)
+			{
+				sp = 0;
+				stackThread = s.m_threadID;
+			}
+
+			// pop ancestors that ended before this scope started
+			while (sp > 0 && _data->m_scopes[s_stack[sp-1]].m_end <= s.m_start)
+				--sp;
+
+			if (sp > 0)
+			{
+				ProfilerScope& parent = _data->m_scopes[s_stack[sp-1]];
+				if ((parent.m_level + 1 == s.m_level) &&
+					(s.m_start > parent.m_start) && (s.m_end < parent.m_end))
+					parent.m_stats->m_exclusiveTime -= s.m_stats->m_inclusiveTime;
+			}
+
+			if (sp < RPROF_SCOPES_MAX)
+				s_stack[sp++] = i;
 		}
+
+		// --- per-name stats: group instead of an O(n*unique) name scan -------
+		// Sort by name so equal names are adjacent, then accumulate each run.
+		std::sort(&_data->m_scopes[0], &_data->m_scopes[numScopesLocal], SortName());
 
 		_data->m_numScopesStats	= 0;
 
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
+		for (uint32_t i=0; i<numScopesLocal; )
 		{
 			ProfilerScope& scopeI = _data->m_scopes[i];
 
-			scopeI.m_stats->m_inclusiveTimeTotal = scopeI.m_stats->m_inclusiveTime;
-			scopeI.m_stats->m_exclusiveTimeTotal = scopeI.m_stats->m_exclusiveTime;
+			int index = _data->m_numScopesStats++;
+			ProfilerScope& stat = _data->m_scopesStats[index];
 
-			int foundIndex = -1;
-			for (uint32_t j=0; j<_data->m_numScopesStats; ++j)
+			// preserve this entry's own dedicated stats slot (the struct copy
+			// below would otherwise alias the source scope's stats)
+			ProfilerScopeStats* stats	= stat.m_stats;
+			stat						= scopeI;
+			stat.m_stats				= stats;
+			stat.m_stats->m_inclusiveTimeTotal	= 0;
+			stat.m_stats->m_exclusiveTimeTotal	= 0;
+			stat.m_stats->m_occurences			= 0;
+
+			uint32_t j = i;
+			while ((j < numScopesLocal) && (rprofStrCmp(_data->m_scopes[j].m_name, scopeI.m_name) == 0))
 			{
-				ProfilerScope& scopeJ = _data->m_scopesStats[j];
-				if (strcmp(scopeI.m_name, scopeJ.m_name) == 0)
-				{
-					foundIndex = j;
-					break;
-				}
+				ProfilerScope& sj = _data->m_scopes[j];
+				sj.m_stats->m_inclusiveTimeTotal = sj.m_stats->m_inclusiveTime;
+				sj.m_stats->m_exclusiveTimeTotal = sj.m_stats->m_exclusiveTime;
+
+				stat.m_stats->m_inclusiveTimeTotal += sj.m_stats->m_inclusiveTime;
+				stat.m_stats->m_exclusiveTimeTotal += sj.m_stats->m_exclusiveTime;
+				stat.m_stats->m_occurences++;
+				++j;
 			}
 
-			if (foundIndex == -1)
-			{
-				int index = _data->m_numScopesStats++;
-				ProfilerScope& scope = _data->m_scopesStats[index];
-
-				// the struct copy below clobbers m_stats, so preserve this
-				// entry's own dedicated stats slot and copy the values into it
-				// rather than aliasing the source scope's stats
-				ProfilerScopeStats* stats	= scope.m_stats;
-				scope						= scopeI;
-				scope.m_stats				= stats;
-				*scope.m_stats				= *scopeI.m_stats;
-				scope.m_stats->m_occurences	= 1;
-			}
-			else
-			{
-				ProfilerScope& scope = _data->m_scopesStats[foundIndex];
-				scope.m_stats->m_inclusiveTimeTotal += scopeI.m_stats->m_inclusiveTime;
-				scope.m_stats->m_exclusiveTimeTotal += scopeI.m_stats->m_exclusiveTime;
-				scope.m_stats->m_occurences++;
-			}
+			i = j;
 		}
 	}
 
@@ -525,9 +598,9 @@ extern "C" {
 		int decomp = -1;
 		do
 		{
-			delete[] buffer;
+			rprofFree(buffer);
 			bufferSize *= 2;
-			buffer = new uint8_t[bufferSize];
+			buffer = (uint8_t*)rprofAlloc(bufferSize);
 			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
 
 		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
@@ -553,7 +626,7 @@ extern "C" {
 				*_time = rprofClock2ms(endtime - startTime, frequency);
 		}
 
-		delete[] bufPtr;
+		rprofFree(bufPtr);
 	}
 
 	void rprofRelease(ProfilerFrame* _data)
@@ -561,19 +634,19 @@ extern "C" {
 		for (uint32_t i=0; i<_data->m_numScopes; ++i)
 		{
 			ProfilerScope& scope = _data->m_scopes[i];
-			delete[] scope.m_name;
-			delete[] scope.m_file;
+			rprofFree((void*)scope.m_name);
+			rprofFree((void*)scope.m_file);
 		}
 
 		for (uint32_t i=0; i<_data->m_numThreads; ++i)
 		{
 			ProfilerThread& t = _data->m_threads[i];
-			delete[] t.m_name;
+			rprofFree((void*)t.m_name);
 		}
 
-		delete[] _data->m_scopes;
-		delete[] _data->m_threads;
-		delete[] _data->m_scopeStatsInfo;
+		rprofFree(_data->m_scopes);
+		rprofFree(_data->m_threads);
+		rprofFree(_data->m_scopeStatsInfo);
 	}
 
 	uint64_t rprofGetClock()

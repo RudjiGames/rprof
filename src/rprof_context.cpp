@@ -24,6 +24,7 @@ namespace rprof {
 		, m_pauseProfiling(false)
 	{
 		m_tlsLevel = tlsAllocate();
+		m_tlsThreadID = tlsAllocate();
 		rprofFreeListCreate(sizeof(ProfilerScope), RPROF_SCOPES_MAX, &m_scopesAllocator);
 
 		for (int i=0; i<BufferUse::Count; ++i)
@@ -37,6 +38,7 @@ namespace rprof {
 	{
 		rprofFreeListDestroy(&m_scopesAllocator);
 		tlsFree(m_tlsLevel);
+		tlsFree(m_tlsThreadID);
 	}
 
 	void ProfilerContext::setThreshold(float _ms, int _levelThreshold)
@@ -84,6 +86,10 @@ namespace rprof {
 
 		m_thresholdCrossed = false;
 
+		// cache once - the value never changes after first calibration, but it
+		// is otherwise re-fetched for every open scope below
+		const uint64_t clockFrequency = rprofGetClockFrequency();
+
 		int level = (int)m_levelThreshold - 1;
 
 		uint32_t scopesToRestart = 0;
@@ -121,13 +127,13 @@ namespace rprof {
 			{
 				uint64_t scopeEndTime = stillOpen ? frameEndTime : scopeEnd;
 
-				if (m_timeThreshold <= rprofClock2ms(scopeEndTime - scope->m_start, rprofGetClockFrequency()))
+				if (m_timeThreshold <= rprofClock2ms(scopeEndTime - scope->m_start, clockFrequency))
 					m_thresholdCrossed = true;
 			}
 		}
 
 		// did frame cross threshold ?
-		float prevFrameTime = rprofClock2ms(frameEndTime - frameBeginTime, rprofGetClockFrequency());
+		float prevFrameTime = rprofClock2ms(frameEndTime - frameBeginTime, clockFrequency);
 		if ((level == -1) && (m_timeThreshold <= prevFrameTime))
 			m_thresholdCrossed = true;
 
@@ -173,6 +179,21 @@ namespace rprof {
 		tlsSetValue(m_tlsLevel, (void*)threadLevel);
 	}
 
+	uint64_t ProfilerContext::getThreadIDCached()
+	{
+		// getThreadID() can be a real syscall (e.g. gettid on Linux); the id is
+		// constant per thread, so fetch it once and cache it in TLS. Store
+		// id + 1 so a never-set slot (NULL) is unambiguous, mirroring incLevel.
+		void* tl = tlsGetValue(m_tlsThreadID);
+		if (!tl)
+		{
+			uint64_t id = getThreadID();
+			tlsSetValue(m_tlsThreadID, (void*)(uintptr_t)(id + 1));
+			return id;
+		}
+		return (uint64_t)((uintptr_t)tl - 1);
+	}
+
 	ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const char* _name)
 	{
 		ProfilerScope* scope = 0;
@@ -187,7 +208,7 @@ namespace rprof {
 			scope->m_name		= addString(_name, BufferUse::Capture);
 			scope->m_start		= rprofGetClock();
 			rprofAtomicStore64(&scope->m_end, scope->m_start);
-			scope->m_threadID	= getThreadID();
+			scope->m_threadID	= getThreadIDCached();
 			scope->m_file		= _file;
 			scope->m_line		= _line;
 			scope->m_level		= incLevel();

@@ -44,6 +44,7 @@ namespace rprof {
 		char*			m_namesData[BufferUse::Count];
 		int				m_namesSize[BufferUse::Count];
 		uint32_t		m_tlsLevel;
+		uint32_t		m_tlsThreadID;
 
 		std::unordered_map<uint64_t, std::string>	m_threadNames;
 
@@ -60,6 +61,7 @@ namespace rprof {
 		void			beginFrame();
 		int				incLevel();
 		void			decLevel();
+		uint64_t		getThreadIDCached();
 		ProfilerScope*	beginScope(const char* _file, int _line, const char* _name);
 		void			endScope(ProfilerScope* _scope);
 		const char*		addString(const char* _name, BufferUse _buffer);

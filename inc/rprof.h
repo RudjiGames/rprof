@@ -24,6 +24,25 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*--------------------------------------------------------------------------
+ * Memory allocation
+ *
+ * rprof does not use the C runtime; the host application must provide an
+ * allocator via rprofSetAllocator BEFORE calling rprofInit/rprofLoad/etc.
+ *------------------------------------------------------------------------*/
+
+	/* Allocation callback. Must return _size bytes (or 0 on failure). */
+	typedef void* (*rprofAllocFn)(void* _userData, size_t _size);
+
+	/* Free callback. _ptr is never 0. */
+	typedef void  (*rprofFreeFn )(void* _userData, void* _ptr);
+
+	/* Installs the memory allocator used by rprof for all allocations. */
+	/* @param[in] _alloc    - allocation callback */
+	/* @param[in] _free     - free callback */
+	/* @param[in] _userData - opaque value passed back to the callbacks */
+	void rprofSetAllocator(rprofAllocFn _alloc, rprofFreeFn _free, void* _userData);
+
+/*--------------------------------------------------------------------------
  * Structures describing profiling data
  *------------------------------------------------------------------------*/
 

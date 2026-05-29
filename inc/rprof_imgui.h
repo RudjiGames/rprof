@@ -7,8 +7,8 @@
 #define RPROF_DRAW_H
 
 #include "rprof.h"
+#include "rprof_cstd.h"
 #include <algorithm>
-#include <inttypes.h>
 #include <rapp/3rd/imgui/imgui.h>
 
 	#define RPROF_DESIRED_FRAME_RATE	 30.0f
@@ -75,7 +75,7 @@
 
 	static inline void flashColorNamed(ImU32& _drawColor, ProfilerScope& _cs, uint64_t _elapsedTime)
 	{
-		if (s_statClickedName && (strcmp(_cs.m_name, s_statClickedName) == 0) && (_cs.m_level == s_statClickedLevel))
+		if (s_statClickedName && (rprofStrCmp(_cs.m_name, s_statClickedName) == 0) && (_cs.m_level == s_statClickedLevel))
 			flashColor(_drawColor, _elapsedTime);
 	}
 
@@ -283,7 +283,7 @@
 			frameStartY	+= 62.0f;
 
 			if (s_currentFrame == 0)
-				memset(s_frameTimes, 0, sizeof(s_frameTimes));
+				rprofMemSet(s_frameTimes, 0, sizeof(s_frameTimes));
 
 			if (!rprofIsPaused())
 			{
@@ -371,7 +371,7 @@
 					}
 				tlt.x += 3;
 				char buffer[512];
-				snprintf(buffer, 512, "%s  -  0x%" PRIx64, threadName, threadID);
+				rprofFormatThreadLabel(buffer, 512, threadName, threadID);
 				draw_list->AddText(tlt, IM_COL32(255, 255, 255, 255), buffer);
 				draw_list->PopClipRect();
 

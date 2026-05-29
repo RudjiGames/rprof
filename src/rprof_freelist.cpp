@@ -4,8 +4,8 @@
  */
 
 
-#include <stdlib.h>
 #include "rprof_freelist.h"
+#include "rprof_alloc.h"
 
 void rprofFreeListCreate(size_t _blockSize, uint32_t _maxBlocks, struct rprofFreeList_t* _freeList)
 {
@@ -13,13 +13,13 @@ void rprofFreeListCreate(size_t _blockSize, uint32_t _maxBlocks, struct rprofFre
 	_freeList->m_blockSize			= (uint32_t)_blockSize;
 	_freeList->m_blocksFree			= _maxBlocks;
 	_freeList->m_blocksAlllocated	= 0;
-	_freeList->m_buffer				= (uint8_t*)malloc(_blockSize * _maxBlocks);
+	_freeList->m_buffer				= (uint8_t*)rprofAlloc(_blockSize * _maxBlocks);
 	_freeList->m_next				= _freeList->m_buffer;
 }
 
 void rprofFreeListDestroy(struct rprofFreeList_t* _freeList)
 {
-	free(_freeList->m_buffer);
+	rprofFree(_freeList->m_buffer);
 }
 
 void* rprofFreeListAlloc(struct rprofFreeList_t* _freeList)
