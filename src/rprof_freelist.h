@@ -7,6 +7,7 @@
 #define RPROF_FREELIST_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct rprofFreeList_t
 {

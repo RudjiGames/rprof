@@ -369,7 +369,7 @@ extern "C" {
 		uint32_t numScopes	= 0;
 		uint32_t numThreads	= 0;
 		uint32_t numStrings	= 0;
-		uint32_t strIdx;
+		uint32_t strIdx = 0;
 		bool ok = true;
 
 		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_startTime);
