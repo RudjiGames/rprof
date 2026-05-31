@@ -25,6 +25,7 @@ namespace rprof {
 	{
 		m_tlsLevel = tlsAllocate();
 		m_tlsThreadID = tlsAllocate();
+		m_numThreadNames = 0;
 		rprofFreeListCreate(sizeof(ProfilerScope), RPROF_SCOPES_MAX, &m_scopesAllocator);
 
 		for (int i=0; i<BufferUse::Count; ++i)
@@ -65,13 +66,46 @@ namespace rprof {
 	void ProfilerContext::registerThread(uint64_t _threadID, const char* _name)
 	{
 		ScopedMutexLocker lock(m_mutex);
-		m_threadNames[_threadID] = _name;
+
+		// find an existing entry for this thread, or append a new one
+		ThreadInfo* slot = 0;
+		for (uint32_t i=0; i<m_numThreadNames; ++i)
+			if (m_threadNames[i].m_threadID == _threadID)
+			{
+				slot = &m_threadNames[i];
+				break;
+			}
+
+		if (!slot)
+		{
+			if (m_numThreadNames == RPROF_DRAW_THREADS_MAX)
+				return;
+			slot = &m_threadNames[m_numThreadNames++];
+			slot->m_threadID = _threadID;
+		}
+
+		// copy the name inline, truncating to fit (always null terminated)
+		uint32_t n = 0;
+		if (_name)
+			while (_name[n] && (n < RPROF_THREAD_NAME_MAX - 1))
+			{
+				slot->m_name[n] = _name[n];
+				++n;
+			}
+		slot->m_name[n] = 0;
 	}
 
 	void ProfilerContext::unregisterThread(uint64_t _threadID)
 	{
 		ScopedMutexLocker lock(m_mutex);
-		m_threadNames.erase(_threadID);
+
+		for (uint32_t i=0; i<m_numThreadNames; ++i)
+			if (m_threadNames[i].m_threadID == _threadID)
+			{
+				// swap the last entry into this slot to keep the array packed
+				m_threadNames[i] = m_threadNames[--m_numThreadNames];
+				return;
+			}
 	}
 
 	void ProfilerContext::beginFrame()
@@ -139,7 +173,9 @@ namespace rprof {
 
 		if (m_thresholdCrossed && !m_pauseProfiling)
 		{
-			std::swap(m_namesData[BufferUse::Capture], m_namesData[BufferUse::Display]);
+			char* tmpNames = m_namesData[BufferUse::Capture];
+			m_namesData[BufferUse::Capture] = m_namesData[BufferUse::Display];
+			m_namesData[BufferUse::Display] = tmpNames;
 
 			for (uint32_t i=0; i<m_scopesOpen; ++i)
 				m_scopesDisplay[i] = scopesDisplay[i];
@@ -263,7 +299,7 @@ namespace rprof {
 
 		static ProfilerThread threadData[RPROF_DRAW_THREADS_MAX];
 
-		uint32_t numThreads = (uint32_t)m_threadNames.size();
+		uint32_t numThreads = m_numThreadNames;
 		if (numThreads > RPROF_DRAW_THREADS_MAX)
 			numThreads = RPROF_DRAW_THREADS_MAX;
 
@@ -279,12 +315,10 @@ namespace rprof {
 		_data->m_levelThreshold	= m_levelThreshold;
 		_data->m_platformID		= getPlatformID();
 
-		std::unordered_map<uint64_t, std::string>::iterator it = m_threadNames.begin();
 		for (uint32_t i=0; i<numThreads; ++i)
 		{
-			threadData[i].m_threadID	= it->first;
-			threadData[i].m_name		= it->second.c_str();
-			++it;
+			threadData[i].m_threadID	= m_threadNames[i].m_threadID;
+			threadData[i].m_name		= m_threadNames[i].m_name;
 		}
 	}
 

@@ -10,6 +10,8 @@
 #include "rprof_alloc.h"
 
 #include <algorithm>
+#include <unordered_map>
+#include <string>
 
 #include "../3rd/lz4-r191/lz4.h"
 #if !RPROF_LZ4_NO_DEFINE
@@ -173,7 +175,10 @@ extern "C" {
 
 	void rprofInit()
 	{
-		g_context = new rprof::ProfilerContext();
+		// route through the host allocator (placement new) instead of global
+		// operator new, so the runtime never touches the CRT heap
+		void* mem = rprofAlloc(sizeof(rprof::ProfilerContext));
+		g_context = mem ? new (mem) rprof::ProfilerContext() : 0;
 		// pre-calibrate the clock frequency now, outside of any lock, so the
 		// first rprofBeginFrame() does not stall while holding the mutex
 		rprofGetClockFrequency();
@@ -181,8 +186,12 @@ extern "C" {
 
 	void rprofShutDown()
 	{
-		delete g_context;
-		g_context = 0;
+		if (g_context)
+		{
+			g_context->~ProfilerContext();
+			rprofFree(g_context);
+			g_context = 0;
+		}
 	}
 
 	void rprofSetThreshold(float _ms, int _level)

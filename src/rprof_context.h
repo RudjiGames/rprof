@@ -11,10 +11,15 @@
 #include "rprof_mutex.h"
 #include "rprof_freelist.h"
 
-#include <unordered_map>
-#include <string>
-
 namespace rprof {
+
+	// fixed-size thread name storage; the runtime never allocates, so thread
+	// names live inline instead of in a std::unordered_map<.., std::string>
+	struct ThreadInfo
+	{
+		uint64_t	m_threadID;
+		char		m_name[RPROF_THREAD_NAME_MAX];
+	};
 
 	class ProfilerContext
 	{
@@ -46,9 +51,15 @@ namespace rprof {
 		uint32_t		m_tlsLevel;
 		uint32_t		m_tlsThreadID;
 
-		std::unordered_map<uint64_t, std::string>	m_threadNames;
+		ThreadInfo		m_threadNames[RPROF_DRAW_THREADS_MAX];
+		uint32_t		m_numThreadNames;
 
 	public:
+		// placement construction routed through the host allocator; avoids both
+		// the CRT global operator new and any dependency on <new>
+		static void* operator new   (size_t, void* _ptr) { return _ptr; }
+		static void  operator delete(void*,  void*)      {}
+
 		ProfilerContext();
 		~ProfilerContext();
 

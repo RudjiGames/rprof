@@ -9,6 +9,7 @@
 #define RPROF_SCOPES_MAX            (16*1024)
 #define RPROF_TEXT_MAX			    (1024*1024)
 #define RPROF_DRAW_THREADS_MAX	    (1024)
+#define RPROF_THREAD_NAME_MAX	    (64)
 
 /*--------------------------------------------------------------------------
  * Define to 1 if LZ4 is already statically linked with project using rprof
