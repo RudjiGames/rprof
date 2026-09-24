@@ -10,8 +10,6 @@
 #include "rprof_alloc.h"
 
 #include <algorithm>
-#include <unordered_map>
-#include <string>
 
 #include "../3rd/lz4-r191/lz4.h"
 #if !RPROF_LZ4_NO_DEFINE
@@ -66,58 +64,92 @@ static inline bool readVarSafe(uint8_t*& _buffer, const uint8_t* _end, T& _var)
 	return true;
 }
 
-static inline char* readStringSafe(uint8_t*& _buffer, const uint8_t* _end)
+// deduplicating string table used when saving: an open addressing hash
+// table allocated through the host allocator (no CRT heap, no string copies)
+struct StringTable
 {
-	uint32_t len;
-	if (!readVarSafe(_buffer, _end, len))
-		return 0;
-	if ((size_t)(_end - _buffer) < len)
-		return 0;
-	char* str = (char*)rprofAlloc(len+1);
-	memoryCopy(str, _buffer, len);
-	str[len] = 0;
-	_buffer += len;
-	return str;
-}
+	const char**	m_slots;		// hash slot -> string, 0 when empty
+	uint32_t*		m_slotIndex;	// hash slot -> string index
+	const char**	m_strings;		// string index -> string, insertion order
+	const char*		m_ptrCache[256];		// direct mapped pointer -> index cache;
+	uint32_t		m_ptrCacheIndex[256];	// scopes from one file share a pointer
+	uint32_t		m_mask;
+	uint32_t		m_count;
+	uint32_t		m_totalSize;
 
-const char* duplicateString(const char* _str)
-{
-	if (!_str)
-		return nullptr;
-	char* str = (char*)rprofAlloc(rprofStrLen(_str)+1);
-	rprofStrCpy(str, _str);
-	return str;
-}
-
-struct StringStore
-{
-	typedef std::unordered_map<std::string, uint32_t> StringToIndexType;
-	typedef std::unordered_map<uint32_t, std::string> IndexToStringType;
-
-	uint32_t			m_totalSize;
-	StringToIndexType	m_stringIndexMap;
-	IndexToStringType	m_strings;
-
-	StringStore()
-		: m_totalSize(0)
+	StringTable()
+		: m_slots(0)
+		, m_slotIndex(0)
+		, m_strings(0)
+		, m_mask(0)
+		, m_count(0)
+		, m_totalSize(0)
 	{
+		for (int i=0; i<256; ++i)
+			m_ptrCache[i] = 0;
 	}
 
-	void addString(const char* _str)
+	~StringTable()
 	{
-		StringToIndexType::iterator it = m_stringIndexMap.find(_str);
-		if (it == m_stringIndexMap.end())
+		rprofFree(m_slots);
+		rprofFree(m_slotIndex);
+		rprofFree(m_strings);
+	}
+
+	bool init(uint32_t _maxStrings)
+	{
+		uint32_t capacity = 16;
+		while (capacity < _maxStrings * 2)
+			capacity <<= 1;
+
+		m_mask		= capacity - 1;
+		m_slots		= (const char**)rprofAlloc(sizeof(const char*) * capacity);
+		m_slotIndex	= (uint32_t*)rprofAlloc(sizeof(uint32_t) * capacity);
+		m_strings	= (const char**)rprofAlloc(sizeof(const char*) * (_maxStrings ? _maxStrings : 1));
+		if (!m_slots || !m_slotIndex || !m_strings)
+			return false;
+
+		for (uint32_t i=0; i<capacity; ++i)
+			m_slots[i] = 0;
+		return true;
+	}
+
+	// returns the index of the string, adding it if not present
+	uint32_t add(const char* _str)
+	{
+		if (!_str)
+			_str = "";
+
+		// fast path: the same pointer was seen before - skip hashing/comparing
+		const uint32_t cacheSlot = (uint32_t)(((uintptr_t)_str >> 3) & 255);
+		if (m_ptrCache[cacheSlot] == _str)
+			return m_ptrCacheIndex[cacheSlot];
+
+		const uint32_t index = find(_str);
+		m_ptrCache[cacheSlot]		= _str;
+		m_ptrCacheIndex[cacheSlot]	= index;
+		return index;
+	}
+
+	uint32_t find(const char* _str)
+	{
+		uint32_t hash = 2166136261u;	// FNV-1a
+		for (const char* c = _str; *c; ++c)
+			hash = (hash ^ (uint8_t)*c) * 16777619u;
+
+		uint32_t slot = hash & m_mask;
+		while (m_slots[slot])
 		{
-			uint32_t index = (uint32_t)m_stringIndexMap.size();
-			m_totalSize				+= 4 + (uint32_t)rprofStrLen(_str);	// see writeStr for details
-			m_stringIndexMap[_str]	 = index;
-			m_strings[index]		 = _str;
+			if ((m_slots[slot] == _str) || (rprofStrCmp(m_slots[slot], _str) == 0))
+				return m_slotIndex[slot];
+			slot = (slot + 1) & m_mask;
 		}
-	}
 
-	uint32_t getString(const char* _str)
-	{
-		return m_stringIndexMap[_str];
+		m_slots[slot]		= _str;
+		m_slotIndex[slot]	= m_count;
+		m_strings[m_count]	= _str;
+		m_totalSize		   += 4 + (uint32_t)rprofStrLen(_str);	// see writeStr for details
+		return m_count++;
 	}
 };
 
@@ -156,12 +188,13 @@ struct SortNested
 	}
 };
 
-// groups scopes with identical names next to each other
+// groups scopes with identical names next to each other; names of a loaded
+// frame are deduplicated, so equal names share a pointer
 struct SortName
 {
 	bool operator()(const ProfilerScope& a, const ProfilerScope& b) const
 	{
-		return rprofStrCmp(a.m_name, b.m_name) < 0;
+		return (uintptr_t)a.m_name < (uintptr_t)b.m_name;
 	}
 };
 
@@ -277,28 +310,41 @@ extern "C" {
 
 	int rprofSave(ProfilerFrame* _data, void* _buffer, size_t _bufferSize)
 	{
-		// fill string data
-		StringStore strStore;
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
+		const uint32_t numScopes	= _data->m_numScopes;
+		const uint32_t numThreads	= _data->m_numThreads;
+		const uint32_t maxStrings	= numScopes * 2 + numThreads;
+
+		// fill string data, remembering each string's index so it is looked up
+		// only once
+		StringTable strTable;
+		uint32_t* strIndices = (uint32_t*)rprofAlloc(sizeof(uint32_t) * (maxStrings ? maxStrings : 1));
+		if (!strIndices || !strTable.init(maxStrings))
 		{
-			ProfilerScope& scope = _data->m_scopes[i];
-			strStore.addString(scope.m_name);
-			strStore.addString(scope.m_file);
-		}
-		for (uint32_t i=0; i<_data->m_numThreads; ++i)
-		{
-			strStore.addString(_data->m_threads[i].m_name);
+			rprofFree(strIndices);
+			return 0;
 		}
 
+		for (uint32_t i=0; i<numScopes; ++i)
+		{
+			ProfilerScope& scope = _data->m_scopes[i];
+			strIndices[i*2 + 0] = strTable.add(scope.m_name);
+			strIndices[i*2 + 1] = strTable.add(scope.m_file);
+		}
+		for (uint32_t i=0; i<numThreads; ++i)
+			strIndices[numScopes*2 + i] = strTable.add(_data->m_threads[i].m_name);
+
 		// calc data size, overestimate to be safe
-		uint32_t maxTotalSize =	_data->m_numScopes  * sizeof(ProfilerScope)  +
-								_data->m_numThreads * sizeof(ProfilerThread) +
+		uint32_t maxTotalSize =	numScopes  * sizeof(ProfilerScope)  +
+								numThreads * sizeof(ProfilerThread) +
 								sizeof(ProfilerFrame) +
-								strStore.m_totalSize;
+								strTable.m_totalSize;
 
 		uint8_t* buffer = (uint8_t*)rprofAlloc(maxTotalSize);
 		if (!buffer)
+		{
+			rprofFree(strIndices);
 			return 0;
+		}
 		uint8_t* bufPtr = buffer;
 
 		writeVar(buffer, _data->m_startTime);
@@ -308,45 +354,49 @@ extern "C" {
 		writeVar(buffer, rprofGetClockFrequency());
 
 		// write scopes
-		writeVar(buffer, _data->m_numScopes);
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
+		writeVar(buffer, numScopes);
+		for (uint32_t i=0; i<numScopes; ++i)
 		{
 			ProfilerScope& scope = _data->m_scopes[i];
 			writeVar(buffer, scope.m_start);
 			writeVar(buffer, scope.m_end);
 			writeVar(buffer, scope.m_threadID);
-			writeVar(buffer, strStore.getString(scope.m_name));
-			writeVar(buffer, strStore.getString(scope.m_file));
+			writeVar(buffer, strIndices[i*2 + 0]);
+			writeVar(buffer, strIndices[i*2 + 1]);
 			writeVar(buffer, scope.m_line);
 			writeVar(buffer, scope.m_level);
 		}
 
 		// write thread info
-		writeVar(buffer, _data->m_numThreads);
-		for (uint32_t i=0; i<_data->m_numThreads; ++i)
+		writeVar(buffer, numThreads);
+		for (uint32_t i=0; i<numThreads; ++i)
 		{
-			ProfilerThread& t = _data->m_threads[i];
-			writeVar(buffer, t.m_threadID);
-			writeVar(buffer, strStore.getString(t.m_name));
+			writeVar(buffer, _data->m_threads[i].m_threadID);
+			writeVar(buffer, strIndices[numScopes*2 + i]);
 		}
 
 		// write string data
-		uint32_t numStrings = (uint32_t)strStore.m_strings.size();
-		writeVar(buffer, numStrings);
-
-		for (uint32_t i=0; i<strStore.m_strings.size(); ++i)
-			writeStr(buffer, strStore.m_strings[i].c_str());
+		writeVar(buffer, strTable.m_count);
+		for (uint32_t i=0; i<strTable.m_count; ++i)
+			writeStr(buffer, strTable.m_strings[i]);
 
 		int compSize = LZ4_compress_default((const char*)bufPtr, (char*)_buffer, (int)(buffer - bufPtr), (int)_bufferSize);
 		rprofFree(bufPtr);
+		rprofFree(strIndices);
 		return compSize;
 	}
 
 	void rprofLoad(ProfilerFrame* _data, void* _buffer, size_t _bufferSize)
 	{
-		size_t		bufferSize	= _bufferSize;
+		// captures typically compress 3-6x; start big enough that the first
+		// attempt usually succeeds instead of decompressing twice
+		size_t		bufferSize	= _bufferSize * 4;
 		uint8_t*	buffer		= 0;
 		uint8_t*	bufferPtr;
+
+		// an empty input would never grow the buffer below (0 * 2 == 0)
+		if (bufferSize < 64)
+			bufferSize = 64;
 
 		int decomp = -1;
 		do 
@@ -378,10 +428,12 @@ extern "C" {
 
 		const uint8_t* bufferEnd = bufferPtr + decomp;
 
+		// pass 1: validate the whole buffer and measure it, so the frame can be
+		// built in a single allocation without any partial state to undo
 		uint32_t numScopes	= 0;
 		uint32_t numThreads	= 0;
 		uint32_t numStrings	= 0;
-		uint32_t strIdx = 0;
+		size_t	 stringBytes = 0;
 		bool ok = true;
 
 		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_startTime);
@@ -390,135 +442,109 @@ extern "C" {
 		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_platformID);
 		ok = ok && readVarSafe(buffer, bufferEnd, _data->m_CPUFrequency);
 
-		// read scopes
+		// a serialized scope is 40 bytes; checking the count against the data
+		// left also rules out integer overflow / over-allocation
 		ok = ok && readVarSafe(buffer, bufferEnd, numScopes);
+		ok = ok && (numScopes <= (size_t)(bufferEnd - buffer) / 40);
+		uint8_t* scopesData = buffer;
+		if (ok)
+			buffer += (size_t)numScopes * 40;
 
-		// a serialized scope is 40 bytes; reject counts that cannot possibly fit
-		// in the decompressed data to avoid integer overflow / over-allocation
-		if (ok && (numScopes > (size_t)(bufferEnd - buffer) / 40))
-			ok = false;
+		// a serialized thread is 12 bytes
+		ok = ok && readVarSafe(buffer, bufferEnd, numThreads);
+		ok = ok && (numThreads <= (size_t)(bufferEnd - buffer) / 12);
+		uint8_t* threadsData = buffer;
+		if (ok)
+			buffer += (size_t)numThreads * 12;
 
-		if (!ok)
+		// each string is at least a 4-byte length prefix
+		ok = ok && readVarSafe(buffer, bufferEnd, numStrings);
+		ok = ok && (numStrings <= (size_t)(bufferEnd - buffer) / 4);
+		uint8_t* stringsData = buffer;
+		for (uint32_t i=0; i<numStrings && ok; ++i)
+		{
+			uint32_t len = 0;
+			ok = readVarSafe(buffer, bufferEnd, len) && ((size_t)(bufferEnd - buffer) >= len);
+			if (ok)
+			{
+				buffer		+= len;
+				stringBytes	+= (size_t)len + 1;
+			}
+		}
+
+		// one block holds scopes + stats scopes, their stats, threads, the
+		// string table and the string characters; rprofRelease frees it
+		const size_t scopesSize		= sizeof(ProfilerScope)		 * (size_t)numScopes * 2;	// extra space for viewer - m_scopesStats
+		const size_t statsSize		= sizeof(ProfilerScopeStats) * (size_t)numScopes * 2;
+		const size_t threadsSize	= sizeof(ProfilerThread)	 * (size_t)numThreads;
+		const size_t tableSize		= sizeof(const char*)		 * (size_t)numStrings;
+
+		uint8_t* block = ok ? (uint8_t*)rprofAlloc(scopesSize + statsSize + threadsSize + tableSize + stringBytes + 1) : 0;
+		if (!block)
 		{
 			rprofFree(bufferPtr);
 			return;
 		}
 
-		_data->m_numScopes		= numScopes;
-		_data->m_scopes			= (ProfilerScope*)rprofAlloc(sizeof(ProfilerScope) * (size_t)numScopes * 2); // extra space for viewer - m_scopesStats
-		_data->m_scopesStats	= &_data->m_scopes[numScopes];
-		_data->m_scopeStatsInfo	= (ProfilerScopeStats*)rprofAlloc(sizeof(ProfilerScopeStats) * (size_t)numScopes * 2);
+		ProfilerScope*		scopes	= (ProfilerScope*)block;
+		ProfilerScopeStats*	stats	= (ProfilerScopeStats*)(block + scopesSize);
+		ProfilerThread*		threads	= (ProfilerThread*)(block + scopesSize + statsSize);
+		const char**		strings	= (const char**)(block + scopesSize + statsSize + threadsSize);
+		char*				chars	= (char*)(block + scopesSize + statsSize + threadsSize + tableSize);
 
-		for (uint32_t i=0; i<numScopes*2; ++i)
-			_data->m_scopes[i].m_stats = &_data->m_scopeStatsInfo[i];
-
-		for (uint32_t i=0; i<numScopes && ok; ++i)
+		// pass 2: everything was validated above, parse without bounds checks
+		buffer = stringsData;
+		for (uint32_t i=0; i<numStrings; ++i)
 		{
-			ProfilerScope& scope = _data->m_scopes[i];
-			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_start);
-			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_end);
-			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_threadID);
-			ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
-			scope.m_name = (const char*)(uintptr_t)strIdx;
-			ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
-			scope.m_file = (const char*)(uintptr_t)strIdx;
-			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_line);
-			ok = ok && readVarSafe(buffer, bufferEnd, scope.m_level);
+			uint32_t len;
+			readVar(buffer, len);
+			memoryCopy(chars, buffer, len);
+			chars[len]	= 0;
+			strings[i]	= chars;
+			chars		+= len + 1;
+			buffer		+= len;
+		}
 
+		uint32_t strIdx;
+		buffer = scopesData;
+		for (uint32_t i=0; i<numScopes; ++i)
+		{
+			ProfilerScope& scope = scopes[i];
+			readVar(buffer, scope.m_start);
+			readVar(buffer, scope.m_end);
+			readVar(buffer, scope.m_threadID);
+			readVar(buffer, strIdx);
+			scope.m_name = (strIdx < numStrings) ? strings[strIdx] : "";
+			readVar(buffer, strIdx);
+			scope.m_file = (strIdx < numStrings) ? strings[strIdx] : "";
+			readVar(buffer, scope.m_line);
+			readVar(buffer, scope.m_level);
+
+			scope.m_stats					= &stats[i];
 			scope.m_stats->m_inclusiveTime	= scope.m_end - scope.m_start;
 			scope.m_stats->m_exclusiveTime	= scope.m_stats->m_inclusiveTime;
 			scope.m_stats->m_occurences		= 0;
 		}
 
-		// read thread info
-		ok = ok && readVarSafe(buffer, bufferEnd, numThreads);
+		for (uint32_t i=numScopes; i<numScopes*2; ++i)
+			scopes[i].m_stats = &stats[i];
 
-		// a serialized thread is 12 bytes
-		if (ok && (numThreads > (size_t)(bufferEnd - buffer) / 12))
-			ok = false;
-
-		if (ok)
-		{
-			_data->m_numThreads	= numThreads;
-			_data->m_threads	= (ProfilerThread*)rprofAlloc(sizeof(ProfilerThread) * numThreads);
-			for (uint32_t i=0; i<numThreads && ok; ++i)
-			{
-				ProfilerThread& t = _data->m_threads[i];
-				ok = ok && readVarSafe(buffer, bufferEnd, t.m_threadID);
-				ok = ok && readVarSafe(buffer, bufferEnd, strIdx);
-				t.m_name = (const char*)(uintptr_t)strIdx;
-			}
-		}
-
-		// read string data
-		ok = ok && readVarSafe(buffer, bufferEnd, numStrings);
-
-		// each string is at least a 4-byte length prefix
-		if (ok && (numStrings > (size_t)(bufferEnd - buffer) / 4))
-			ok = false;
-
-		const char** strings = 0;
-		if (ok)
-		{
-			strings = (const char**)rprofAlloc(sizeof(const char*) * numStrings);
-			for (uint32_t i=0; i<numStrings; ++i)
-				strings[i] = 0;
-			for (uint32_t i=0; i<numStrings && ok; ++i)
-			{
-				strings[i] = readStringSafe(buffer, bufferEnd);
-				if (!strings[i])
-					ok = false;
-			}
-		}
-
-		// bail out cleanly on a malformed buffer - at this point scope/thread
-		// names still hold raw indices (not heap pointers), so we must not let
-		// rprofRelease try to free them
-		if (!ok)
-		{
-			if (strings)
-			{
-				for (uint32_t i=0; i<numStrings; ++i)
-					rprofFree((void*)strings[i]);
-				rprofFree(strings);
-			}
-			rprofFree(bufferPtr);
-
-			rprofFree(_data->m_scopes);
-			rprofFree(_data->m_threads);
-			rprofFree(_data->m_scopeStatsInfo);
-			_data->m_scopes			= 0;
-			_data->m_scopesStats	= 0;
-			_data->m_scopeStatsInfo	= 0;
-			_data->m_threads		= 0;
-			_data->m_numScopes		= 0;
-			_data->m_numScopesStats	= 0;
-			_data->m_numThreads		= 0;
-			return;
-		}
-
-		for (uint32_t i=0; i<numScopes; ++i)
-		{
-			ProfilerScope& scope = _data->m_scopes[i];
-			uintptr_t idx = (uintptr_t)scope.m_name;
-			scope.m_name = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
-
-			idx = (uintptr_t)scope.m_file;
-			scope.m_file = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
-		}
-
+		buffer = threadsData;
 		for (uint32_t i=0; i<numThreads; ++i)
 		{
-			ProfilerThread& t = _data->m_threads[i];
-			uintptr_t idx = (uintptr_t)t.m_name;
-			t.m_name = duplicateString((idx < numStrings) ? strings[(uint32_t)idx] : "");
+			readVar(buffer, threads[i].m_threadID);
+			readVar(buffer, strIdx);
+			threads[i].m_name = (strIdx < numStrings) ? strings[strIdx] : "";
 		}
 
-		for (uint32_t i=0; i<numStrings; ++i)
-			rprofFree((void*)strings[i]);
-
-		rprofFree(strings);
 		rprofFree(bufferPtr);
+
+		_data->m_numScopes		= numScopes;
+		_data->m_numThreads		= numThreads;
+		_data->m_scopes			= scopes;
+		_data->m_scopesStats	= &scopes[numScopes];
+		_data->m_scopeStatsInfo	= stats;
+		_data->m_threads		= threads;
 
 		// process frame data
 
@@ -590,7 +616,7 @@ extern "C" {
 			stat.m_stats->m_occurences			= 0;
 
 			uint32_t j = i;
-			while ((j < numScopesLocal) && (rprofStrCmp(_data->m_scopes[j].m_name, scopeI.m_name) == 0))
+			while ((j < numScopesLocal) && (_data->m_scopes[j].m_name == scopeI.m_name))
 			{
 				ProfilerScope& sj = _data->m_scopes[j];
 				sj.m_stats->m_inclusiveTimeTotal = sj.m_stats->m_inclusiveTime;
@@ -608,61 +634,35 @@ extern "C" {
 
 	void rprofLoadTimeOnly(float* _time, void* _buffer, size_t _bufferSize)
 	{
-		size_t		bufferSize = _bufferSize;
-		uint8_t*	buffer = 0;
+		// only the fixed size header is needed - decode just that instead of
+		// decompressing (and possibly re-decompressing) the whole frame
+		uint8_t header[	sizeof(uint64_t) * 3 +	// start, end, prev frame time
+						sizeof(uint32_t)	 +	// platform ID
+						sizeof(uint64_t)];		// frequency
 
-		int decomp = -1;
-		do
-		{
-			rprofFree(buffer);
-			bufferSize *= 2;
-			buffer = (uint8_t*)rprofAlloc(bufferSize);
-			decomp = LZ4_decompress_safe((const char*)_buffer, (char*)buffer, (int)_bufferSize, (int)bufferSize);
-
-		} while ((decomp < 0) && (bufferSize <= RPROF_LZ4_BUFFER_MAX_SIZE));
-
-		uint64_t startTime = 0;
-		uint64_t endtime = 0, prevFrameTime;
-		uint32_t platformID;
-		uint64_t frequency = 0;
-
-		uint8_t* bufPtr = buffer;
 		*_time = 0.0f;
 
-		if (decomp >= 0)
-		{
-			const uint8_t* bufferEnd = bufPtr + decomp;
-			bool ok = true;
-			ok = ok && readVarSafe(buffer, bufferEnd, startTime);
-			ok = ok && readVarSafe(buffer, bufferEnd, endtime);
-			ok = ok && readVarSafe(buffer, bufferEnd, prevFrameTime);	// dummy
-			ok = ok && readVarSafe(buffer, bufferEnd, platformID);		// dummy
-			ok = ok && readVarSafe(buffer, bufferEnd, frequency);
-			if (ok)
-				*_time = rprofClock2ms(endtime - startTime, frequency);
-		}
+		int decomp = LZ4_decompress_safe_partial((const char*)_buffer, (char*)header, (int)_bufferSize, (int)sizeof(header), (int)sizeof(header));
+		if (decomp < (int)sizeof(header))
+			return;
 
-		rprofFree(bufPtr);
+		uint64_t startTime, endtime, prevFrameTime, frequency;
+		uint32_t platformID;
+
+		uint8_t* buffer = header;
+		readVar(buffer, startTime);
+		readVar(buffer, endtime);
+		readVar(buffer, prevFrameTime);	// dummy
+		readVar(buffer, platformID);	// dummy
+		readVar(buffer, frequency);
+
+		*_time = rprofClock2ms(endtime - startTime, frequency);
 	}
 
 	void rprofRelease(ProfilerFrame* _data)
 	{
-		for (uint32_t i=0; i<_data->m_numScopes; ++i)
-		{
-			ProfilerScope& scope = _data->m_scopes[i];
-			rprofFree((void*)scope.m_name);
-			rprofFree((void*)scope.m_file);
-		}
-
-		for (uint32_t i=0; i<_data->m_numThreads; ++i)
-		{
-			ProfilerThread& t = _data->m_threads[i];
-			rprofFree((void*)t.m_name);
-		}
-
+		// rprofLoad builds the whole frame (including strings) in one block
 		rprofFree(_data->m_scopes);
-		rprofFree(_data->m_threads);
-		rprofFree(_data->m_scopeStatsInfo);
 
 		// leave the frame empty so a repeated release is harmless
 		_data->m_scopes			= 0;

@@ -7,11 +7,17 @@
 #include "rprof_config.h"
 #include "rprof_platform.h"
 #include "rprof_context.h"
-#include "rprof_tls.h"
 
 extern "C" uint64_t rprofGetClockFrequency();
 
 namespace rprof {
+
+	// per thread state; a thread_local access is a plain TLS slot load, much
+	// cheaper than the pthread / Tls* key API, which cost two gets and two sets
+	// per scope
+	static thread_local int			t_level			= 0;
+	static thread_local uint64_t	t_threadID		= 0;
+	static thread_local bool		t_threadIDValid	= false;
 
 	ProfilerContext::ProfilerContext()
 		: m_scopesOpen(0)
@@ -23,9 +29,9 @@ namespace rprof {
 		, m_levelThreshold(0)
 		, m_pauseProfiling(false)
 	{
-		m_tlsLevel = tlsAllocate();
-		m_tlsThreadID = tlsAllocate();
 		m_numThreadNames = 0;
+		m_scopesDisplay		= m_scopesDisplayBuffers[0];
+		m_scopesDisplayBack	= m_scopesDisplayBuffers[1];
 		rprofFreeListCreate(sizeof(ProfilerScope), RPROF_SCOPES_MAX, &m_scopesAllocator);
 
 		for (int i=0; i<BufferUse::Count; ++i)
@@ -38,8 +44,6 @@ namespace rprof {
 	ProfilerContext::~ProfilerContext()
 	{
 		rprofFreeListDestroy(&m_scopesAllocator);
-		tlsFree(m_tlsLevel);
-		tlsFree(m_tlsThreadID);
 	}
 
 	void ProfilerContext::setThreshold(float _ms, int _levelThreshold)
@@ -130,7 +134,10 @@ namespace rprof {
 
 		m_namesSize[BufferUse::Open] = 0;
 
-		static ProfilerScope scopesDisplay[RPROF_SCOPES_MAX];
+		// a paused profiler never publishes this frame, so skip the copies
+		const bool fillDisplay = !m_pauseProfiling;
+		ProfilerScope* scopesDisplay = m_scopesDisplayBack;
+
 		for (uint32_t i=0; i<m_scopesOpen; ++i)
 		{
 			ProfilerScope* scope = m_scopesCapture[i];
@@ -143,20 +150,18 @@ namespace rprof {
 			// the display copy keeps pointing at the name in the capture buffer,
 			// which becomes the display buffer below; the Open buffer is only a
 			// staging area for restarted scopes and is overwritten every frame
-			scopesDisplay[i] = *scope;
-			scopesDisplay[i].m_end = scopeEnd;
-
-			if (stillOpen)
-				scope->m_name = addString(scope->m_name, BufferUse::Open);
-
-			// scope that was not closed, spans frame boundary
-			// keep it for next frame
-			if (stillOpen)
-				m_scopesCapture[scopesToRestart++] = scope;
-			else
+			// copy field by field: a struct copy would read m_end non-atomically
+			if (fillDisplay)
 			{
-				rprofFreeListFree(&m_scopesAllocator, scope);
-				scope = &scopesDisplay[i];
+				ProfilerScope& display = scopesDisplay[i];
+				display.m_start		= scope->m_start;
+				display.m_end		= scopeEnd;
+				display.m_threadID	= scope->m_threadID;
+				display.m_name		= scope->m_name;
+				display.m_file		= scope->m_file;
+				display.m_line		= scope->m_line;
+				display.m_level		= scope->m_level;
+				display.m_stats		= 0;
 			}
 
 			// did scope cross threshold?
@@ -167,6 +172,16 @@ namespace rprof {
 				if (m_timeThreshold <= rprofClock2ms(scopeEndTime - scope->m_start, clockFrequency))
 					m_thresholdCrossed = true;
 			}
+
+			// scope that was not closed, spans frame boundary
+			// keep it for next frame
+			if (stillOpen)
+			{
+				scope->m_name = addString(scope->m_name, BufferUse::Open);
+				m_scopesCapture[scopesToRestart++] = scope;
+			}
+			else
+				rprofFreeListFree(&m_scopesAllocator, scope);
 		}
 
 		// did frame cross threshold ?
@@ -180,8 +195,9 @@ namespace rprof {
 			m_namesData[BufferUse::Capture] = m_namesData[BufferUse::Display];
 			m_namesData[BufferUse::Display] = tmpNames;
 
-			for (uint32_t i=0; i<m_scopesOpen; ++i)
-				m_scopesDisplay[i] = scopesDisplay[i];
+			ProfilerScope* tmpScopes = m_scopesDisplay;
+			m_scopesDisplay		= m_scopesDisplayBack;
+			m_scopesDisplayBack	= tmpScopes;
 
 			m_displayScopes		= m_scopesOpen;
 			m_frameStartTime	= frameBeginTime;
@@ -197,60 +213,54 @@ namespace rprof {
 
 	int ProfilerContext::incLevel()
 	{
-		// may be a first call on this thread
-		void* tl = tlsGetValue(m_tlsLevel);
-		if (!tl)
-		{
-			// we'd like to start with -1 but then the ++ operator below
-			// would result in NULL value for tls so we offset by 2
-			tl = (void*)1;
-			tlsSetValue(m_tlsLevel, tl);
-		}
-		intptr_t threadLevel = (intptr_t)tl - 1;
-		tlsSetValue(m_tlsLevel, (void*)(threadLevel + 2));
-		return (int)threadLevel;
+		return t_level++;
 	}
 
 	void ProfilerContext::decLevel()
 	{
-		intptr_t threadLevel = (intptr_t)tlsGetValue(m_tlsLevel);
-		--threadLevel;
-		tlsSetValue(m_tlsLevel, (void*)threadLevel);
+		--t_level;
 	}
 
 	uint64_t ProfilerContext::getThreadIDCached()
 	{
 		// getThreadID() can be a real syscall (e.g. gettid on Linux); the id is
-		// constant per thread, so fetch it once and cache it in TLS. Store
-		// id + 1 so a never-set slot (NULL) is unambiguous, mirroring incLevel.
-		void* tl = tlsGetValue(m_tlsThreadID);
-		if (!tl)
+		// constant per thread, so fetch it once
+		if (!t_threadIDValid)
 		{
-			uint64_t id = getThreadID();
-			tlsSetValue(m_tlsThreadID, (void*)(uintptr_t)(id + 1));
-			return id;
+			t_threadID		= getThreadID();
+			t_threadIDValid	= true;
 		}
-		return (uint64_t)((uintptr_t)tl - 1);
+		return t_threadID;
 	}
 
 	ProfilerScope* ProfilerContext::beginScope(const char* _file, int _line, const char* _name)
 	{
+		// thread local and clock queries don't touch shared state - do them
+		// before taking the lock to keep the critical section short
+		const uint64_t	threadID	= getThreadIDCached();
+		const int		level		= incLevel();
+		const uint64_t	start		= rprofGetClock();
+
 		ProfilerScope* scope = 0;
 		{
 			ScopedMutexLocker lock(m_mutex);
 			if (m_scopesOpen == RPROF_SCOPES_MAX)
+			{
+				// endScope(0) is a no-op, so undo the level change here
+				decLevel();
 				return 0;
+			}
 
 			scope = (ProfilerScope*)rprofFreeListAlloc(&m_scopesAllocator);
 			m_scopesCapture[m_scopesOpen++] = scope;
 
 			scope->m_name		= addString(_name, BufferUse::Capture);
-			scope->m_start		= rprofGetClock();
-			rprofAtomicStore64(&scope->m_end, scope->m_start);
-			scope->m_threadID	= getThreadIDCached();
+			scope->m_start		= start;
+			rprofAtomicStore64(&scope->m_end, start);
+			scope->m_threadID	= threadID;
 			scope->m_file		= _file;
 			scope->m_line		= _line;
-			scope->m_level		= incLevel();
+			scope->m_level		= level;
 		}
 
 		return scope;
@@ -284,20 +294,18 @@ namespace rprof {
 		if (nameSize >= RPROF_TEXT_MAX)
 			return "";
 
-		char *ret = &nameData[nameSize];
-		while (nameSize < RPROF_TEXT_MAX)
+		// copy with a single bound check per character, truncating so the
+		// terminator always fits
+		char*		ret		= &nameData[nameSize];
+		const int	maxLen	= RPROF_TEXT_MAX - nameSize - 1;
+		int			len		= 0;
+		while ((len < maxLen) && _name[len])
 		{
-			char c = *_name++;
-			if (c)
-				nameData[nameSize++] = c;
-			else
-				break;
+			ret[len] = _name[len];
+			++len;
 		}
-
-		if (nameSize < RPROF_TEXT_MAX)
-			nameData[nameSize++] = 0;
-		else
-			nameData[RPROF_TEXT_MAX - 1] = 0;
+		ret[len] = 0;
+		nameSize += len + 1;
 
 		return ret;
 	}

@@ -37,7 +37,11 @@ namespace rprof {
 		rprofFreeList_t	m_scopesAllocator;
 		uint32_t		m_scopesOpen;
 		ProfilerScope*	m_scopesCapture[RPROF_SCOPES_MAX];
-		ProfilerScope	m_scopesDisplay[RPROF_SCOPES_MAX];
+		// double buffered display scopes: beginFrame fills the back buffer and
+		// publishes it by swapping pointers instead of copying every scope
+		ProfilerScope	m_scopesDisplayBuffers[2][RPROF_SCOPES_MAX];
+		ProfilerScope*	m_scopesDisplay;
+		ProfilerScope*	m_scopesDisplayBack;
 		uint32_t		m_displayScopes;
 		uint64_t		m_frameStartTime;
 		uint64_t		m_frameEndTime;
@@ -48,8 +52,6 @@ namespace rprof {
 		char			m_namesDataBuffers[BufferUse::Count][RPROF_TEXT_MAX];
 		char*			m_namesData[BufferUse::Count];
 		int				m_namesSize[BufferUse::Count];
-		uint32_t		m_tlsLevel;
-		uint32_t		m_tlsThreadID;
 
 		ThreadInfo		m_threadNames[RPROF_DRAW_THREADS_MAX];
 		uint32_t		m_numThreadNames;

@@ -113,8 +113,10 @@
 	{
 		int ret = 0;
 
+		// called every UI frame on the same data - only sort when needed
 		SortScopes customLess;
-		std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
+		if (!std::is_sorted(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess))
+			std::sort(&_data->m_scopes[0], &_data->m_scopes[_data->m_numScopes], customLess);
 
 		ImGui::SetNextWindowPos(ImVec2(6.0f, _multi ? 150.0f : 6.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(900.0f, 480.0f), ImGuiCond_FirstUseEver);
@@ -398,6 +400,10 @@
 			
 			bottom = rprofMax(bottom, br.y);
 
+			// zoomed in - skip scopes that are entirely off screen
+			if ((br.x < frameStartX) || (tl.x > frameEndX))
+				continue;
+
 			int level = cs.m_level;
 			if (cs.m_level >= s_maxLevelColors)
 				level = s_maxLevelColors - 1;
@@ -482,10 +488,19 @@
 		ImGui::RadioButton("Inclusive time", &exclusive, 1);
 		ImGui::Separator();
 
+		// called every UI frame on the same data - only sort when needed
+		ProfilerScope* statsBegin	= &_data->m_scopesStats[0];
+		ProfilerScope* statsEnd		= &_data->m_scopesStats[_data->m_numScopesStats];
 		if (exclusive == 0)
-			std::sort(&_data->m_scopesStats[0], &_data->m_scopesStats[_data->m_numScopesStats], customLessExc);
+		{
+			if (!std::is_sorted(statsBegin, statsEnd, customLessExc))
+				std::sort(statsBegin, statsEnd, customLessExc);
+		}
 		else
-			std::sort(&_data->m_scopesStats[0], &_data->m_scopesStats[_data->m_numScopesStats], customLessInc);
+		{
+			if (!std::is_sorted(statsBegin, statsEnd, customLessInc))
+				std::sort(statsBegin, statsEnd, customLessInc);
+		}
 
 		const ImVec2 p = ImGui::GetCursorScreenPos();
 		const ImVec2 s = ImGui::GetWindowSize();
