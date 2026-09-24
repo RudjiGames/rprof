@@ -11,6 +11,16 @@ static int random(int max)
 	return 1 + rand() % (max>1?max-1:1);
 }
 
+static void* rprofMalloc(void* /*_userData*/, size_t _size)
+{
+	return malloc(_size);
+}
+
+static void rprofFreeMem(void* /*_userData*/, void* _ptr)
+{
+	free(_ptr);
+}
+
 static void busyCPU()
 {
 	uint32_t loopCnt = (rand() % 10000);
@@ -71,6 +81,9 @@ struct rprofApp : public rapp::App
 
 		rapp::appGraphicsInit(this, m_width, m_height, RAPP_WINDOW_FLAG_DPI_AWARE);
 
+		// rprof never uses the CRT heap on its own - an allocator must be
+		// installed before rprofInit, otherwise the profiler stays disabled
+		rprofSetAllocator(rprofMalloc, rprofFreeMem, 0);
 		RPROF_INIT();
 		RPROF_REGISTER_THREAD("Application thread");
 		appRunOnMainThread(registerMainThread, this);
@@ -104,7 +117,7 @@ struct rprofApp : public rapp::App
 	void drawGUI()
 	{
 		RPROF_SCOPE("Draw GUI");
-		ProfilerFrame data;
+		ProfilerFrame data = {};
 		rprofGetFrame(&data);
 
 		char buffer[10*1024];
@@ -119,7 +132,7 @@ struct rprofApp : public rapp::App
 
 			ProfilerFrame data2;
 			rprofLoad(&data2, buffer, size);
-			data2.m_CPUFrequency = 0;
+			rprofRelease(&data2);
 		}
 
 		// Example of writing multi-frame data

@@ -140,11 +140,14 @@ namespace rprof {
 			uint64_t scopeEnd = rprofAtomicLoad64(&scope->m_end);
 			bool stillOpen = (scope->m_start == scopeEnd);
 
-			if (stillOpen)
-				scope->m_name = addString(scope->m_name, BufferUse::Open);
-
+			// the display copy keeps pointing at the name in the capture buffer,
+			// which becomes the display buffer below; the Open buffer is only a
+			// staging area for restarted scopes and is overwritten every frame
 			scopesDisplay[i] = *scope;
 			scopesDisplay[i].m_end = scopeEnd;
+
+			if (stillOpen)
+				scope->m_name = addString(scope->m_name, BufferUse::Open);
 
 			// scope that was not closed, spans frame boundary
 			// keep it for next frame
@@ -261,7 +264,13 @@ namespace rprof {
 		// m_end is read by beginFrame (under the mutex) on another thread,
 		// while this write happens without the lock - store it atomically
 		// to avoid a torn read / data race
-		rprofAtomicStore64(&_scope->m_end, rprofGetClock());
+		// m_end == m_start marks a scope as still open, so a scope that ends on
+		// the same clock tick it started (common with microsecond clocks) must
+		// not keep that value, otherwise it is never released
+		uint64_t endTime = rprofGetClock();
+		if (endTime == _scope->m_start)
+			++endTime;
+		rprofAtomicStore64(&_scope->m_end, endTime);
 		decLevel();
 	}
 

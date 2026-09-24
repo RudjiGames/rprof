@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
@@ -172,11 +173,18 @@ void rprofDrawFrameNavigation(FrameInfo* _infos, uint32_t _numInfos)
 
 	ImGui::BeginChild("##Child", ImVec2(s.x, 70), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-	int idx = 0;	// TODO: Fetch hovered/clicked index from histogram
 	ImGui::PlotHistogram("##Hist", (const float*)_infos, _numInfos, 0, "", 0.f, maxTime, ImVec2(_numInfos * 10, 50), sizeof(FrameInfo));
 
-	if (ImGui::IsMouseClicked(0) && (idx != -1))
+	// only load a frame when the histogram itself was clicked, picking the
+	// bar under the mouse
+	if (_numInfos && ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
 	{
+		const ImVec2 hmin = ImGui::GetItemRectMin();
+		const ImVec2 hmax = ImGui::GetItemRectMax();
+		const float  w    = hmax.x - hmin.x;
+		int idx = w > 0.0f ? (int)(((ImGui::GetMousePos().x - hmin.x) / w) * (float)_numInfos) : 0;
+		if (idx < 0) idx = 0;
+		if (idx >= (int)_numInfos) idx = (int)_numInfos - 1;
 		profilerFrameLoad(g_fileName, _infos[idx].m_offset, _infos[idx].m_size);
 	}
 
@@ -253,15 +261,16 @@ void profilerFrameLoad(const char* _name, uint32_t _offset, uint32_t _size)
 		else
 			fseek(file, _offset + 4, SEEK_SET);
 
-		static const size_t maxDecompSize = 4 * 1024 * 1024;
-		uint8_t* compBuffer		= new uint8_t[csize];
-		uint8_t* decompBuffer	= new uint8_t[maxDecompSize];
-		uint8_t* bufferReadPtr	= decompBuffer;
+		// release the previously loaded frame before replacing it
+		rprofRelease(&g_frame);
 
-		fread(compBuffer, 1, csize, file);
-		rprofLoad(&g_frame, compBuffer, csize);
-		delete[] decompBuffer;
-		delete[] compBuffer;
+		if (csize > 0)
+		{
+			uint8_t* compBuffer = new uint8_t[csize];
+			size_t   readSize   = fread(compBuffer, 1, csize, file);
+			rprofLoad(&g_frame, compBuffer, readSize);
+			delete[] compBuffer;
+		}
 
 		fclose(file);
 	}
@@ -269,7 +278,7 @@ void profilerFrameLoad(const char* _name, uint32_t _offset, uint32_t _size)
 
 void profilerFrameLoadMulti(const char* _name)
 {
-	strcpy(g_fileName, _name);
+	snprintf(g_fileName, sizeof(g_fileName), "%s", _name);
 	FILE* file = fopen(_name, "rb");
 	if (file)
 	{
@@ -281,27 +290,34 @@ void profilerFrameLoadMulti(const char* _name)
 		fread(fileBuffer, 1, fileSize, file);
 		fclose(file);
 
+		g_frameInfos.clear();
+
 		uint32_t offset = 4;
-		while (offset < (uint32_t)fileSize)
+		while ((uint64_t)offset + 4 <= (uint64_t)fileSize)
 		{
 			FrameInfo info;
 			info.m_offset = offset;
 
-			uint32_t frameSize = *reinterpret_cast<uint32_t*>(&fileBuffer[offset]);
+			uint32_t frameSize;
+			memcpy(&frameSize, &fileBuffer[offset], 4);
 			offset += 4;
+
+			// truncated or corrupt file - stop at the last complete frame
+			if (frameSize == 0 || (uint64_t)offset + frameSize > (uint64_t)fileSize)
+				break;
 
 			rprofLoadTimeOnly(&info.m_time, &fileBuffer[offset], frameSize);
 
 			info.m_size = frameSize;
-			g_frameInfos.push_back(info);															
+			g_frameInfos.push_back(info);
 
-			rprofRelease(&g_frame);
 			offset += frameSize;
 		}
 		delete[] fileBuffer;
 	}
 
-	profilerFrameLoad(g_fileName, g_frameInfos[0].m_offset, g_frameInfos[0].m_size);
+	if (!g_frameInfos.empty())
+		profilerFrameLoad(g_fileName, g_frameInfos[0].m_offset, g_frameInfos[0].m_size);
 }
 
 void profilerFrameLoadCallback(const char* _name)
@@ -375,9 +391,14 @@ extern "C" int main(int argc, char** argv)
 	// path to capture passed via URL query, arguments are 'path' and 'file'
 	// http://localhost/profile_inspector/imgui.html?path=http://localhost/profile_inspector/&file=capture.rprof
 
+	if (argc < 3)
+	{
+		fprintf(stderr, "Usage: pass 'path' and 'file' URL arguments\n");
+		return 1;
+	}
+
 	char pathBuffer[1024];
-	strcpy(pathBuffer,argv[1]);
-	strcat(pathBuffer,argv[2]);
+	snprintf(pathBuffer, sizeof(pathBuffer), "%s%s", argv[1], argv[2]);
 
 	printf("Path: %s\n", argv[1]);
 	printf("File: %s\n", argv[2]);
