@@ -151,7 +151,8 @@ struct SortNested
 	{
 		if (a.m_threadID != b.m_threadID)	return a.m_threadID < b.m_threadID;
 		if (a.m_start    != b.m_start)		return a.m_start    < b.m_start;
-		return a.m_end > b.m_end;
+		if (a.m_end      != b.m_end)		return a.m_end      > b.m_end;
+		return a.m_level < b.m_level;
 	}
 };
 
@@ -296,6 +297,8 @@ extern "C" {
 								strStore.m_totalSize;
 
 		uint8_t* buffer = (uint8_t*)rprofAlloc(maxTotalSize);
+		if (!buffer)
+			return 0;
 		uint8_t* bufPtr = buffer;
 
 		writeVar(buffer, _data->m_startTime);
@@ -544,15 +547,19 @@ extern "C" {
 				stackThread = s.m_threadID;
 			}
 
-			// pop ancestors that ended before this scope started
-			while (sp > 0 && _data->m_scopes[s_stack[sp-1]].m_end <= s.m_start)
+			// pop scopes that cannot be this scope's parent: ones that ended
+			// before it started, or that are not shallower than it (siblings
+			// and their descendants)
+			while (sp > 0 &&	((_data->m_scopes[s_stack[sp-1]].m_end < s.m_start) ||
+								 (_data->m_scopes[s_stack[sp-1]].m_level >= s.m_level)))
 				--sp;
 
 			if (sp > 0)
 			{
+				// a child may start/end on the same clock tick as its parent
 				ProfilerScope& parent = _data->m_scopes[s_stack[sp-1]];
 				if ((parent.m_level + 1 == s.m_level) &&
-					(s.m_start > parent.m_start) && (s.m_end < parent.m_end))
+					(s.m_start >= parent.m_start) && (s.m_end <= parent.m_end))
 					parent.m_stats->m_exclusiveTime -= s.m_stats->m_inclusiveTime;
 			}
 
@@ -656,6 +663,15 @@ extern "C" {
 		rprofFree(_data->m_scopes);
 		rprofFree(_data->m_threads);
 		rprofFree(_data->m_scopeStatsInfo);
+
+		// leave the frame empty so a repeated release is harmless
+		_data->m_scopes			= 0;
+		_data->m_scopesStats	= 0;
+		_data->m_scopeStatsInfo	= 0;
+		_data->m_threads		= 0;
+		_data->m_numScopes		= 0;
+		_data->m_numScopesStats	= 0;
+		_data->m_numThreads		= 0;
 	}
 
 	uint64_t rprofGetClock()
@@ -675,7 +691,10 @@ extern "C" {
 #elif RPROF_PLATFORM_PS4
 		int64_t q = sceKernelReadTsc();
 #elif RPROF_PLATFORM_ANDROID
-		int64_t q = ::clock();
+		// clock() measures process CPU time, not wall time - use a monotonic clock
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		int64_t q = (int64_t)now.tv_sec * 1000000000 + now.tv_nsec;
 #elif RPROF_PLATFORM_EMSCRIPTEN
 		int64_t q = (int64_t)(emscripten_get_now() * 1000.0);
 #elif RPROF_PLATFORM_SWITCH
@@ -683,7 +702,7 @@ extern "C" {
 #else
 		struct timeval now;
 		gettimeofday(&now, 0);
-		int64_t q = now.tv_sec * 1000000 + now.tv_usec;
+		int64_t q = (int64_t)now.tv_sec * 1000000 + now.tv_usec;
 #endif
 		return q;
 	}
@@ -721,7 +740,7 @@ extern "C" {
 		QueryPerformanceFrequency(&li);
 		return li.QuadPart;
 #elif RPROF_PLATFORM_ANDROID
-		return CLOCKS_PER_SEC;
+		return 1000000000;
 #elif RPROF_PLATFORM_PS4
 		return sceKernelGetTscFrequency();
 #elif RPROF_PLATFORM_SWITCH

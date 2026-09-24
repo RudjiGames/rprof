@@ -379,14 +379,16 @@
 				writeThreadName	 = false;
 			}
 
-			// handle wrap around
+			// scopes that began in a previous frame start before the frame
+			// start - clamp them to the left edge instead of mirroring them
 			int64_t sX = int64_t(cs.m_start	- _data->m_startTime);
-			if (sX < 0) sX = -sX;
+			if (sX < 0) sX = 0;
 			int64_t eX = int64_t(cs.m_end - _data->m_startTime);
-			if (eX < 0) eX = -eX;
+			if (eX < 0) eX = 0;
 
-			float startXpct = float(sX) / float(totalTime);
-			float endXpct	= float(eX) / float(totalTime);
+			float frameTime = totalTime ? float(totalTime) : 1.0f;
+			float startXpct = float(sX) / frameTime;
+			float endXpct	= float(eX) / frameTime;
 
 			float startX	= paz.w2s(startXpct, frameStartX, frameEndX);
 			float endX		= paz.w2s(endXpct  , frameStartX, frameEndX);
